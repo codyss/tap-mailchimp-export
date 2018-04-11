@@ -102,19 +102,23 @@ def transform_event(record, campaign):
     return new_events
 
 
-def get_latest_record_timestamp(records, last_updated):
+def get_latest_record_timestamp(records, last_updated, time_key):
     if records:
-        return max(max([r['timestamp'] for r in records]),
+        return max(max([r[time_key] for r in records]),
                    last_updated)
     else:
         return last_updated
 
 
-def get_latest_list_update(record, last_updated):
-    if record:
-        return max(record['LAST_CHANGED'], last_updated)
-    else:
-        return last_updated
+def write_records_and_update_state(entity, stream,
+                                   batched_records, last_updated):
+    write_records(stream, batched_records)
+    last_updated[entity['id']] = convert_to_iso_string(
+        get_latest_record_timestamp(
+            batched_records,
+            last_updated[entity['id']],
+            BOOK.return_bookmark_path(stream)[1]
+        ))
 
 
 def convert_to_iso_string(date):
@@ -126,19 +130,23 @@ def convert_to_iso_string(date):
                       max_tries=10,
                       factor=2)
 def run_campaign_request(ctx, c, stream, last_updated):
-
+    batched_records = []
     with ctx.client.put(
             'campaignSubscriberActivity', c, last_updated
     ) as res:
         for r in res.iter_lines():
             if r:
-                records = transform_event(r, c)
-                write_records(stream, records)
-                last_updated[c['id']] = convert_to_iso_string(
-                    get_latest_record_timestamp(
-                        records,
-                        last_updated[c['id']]
-                    ))
+                batched_records = batched_records + transform_event(r, c)
+
+                if len(batched_records) > 500:
+                    write_records_and_update_state(
+                        c, stream, batched_records, last_updated)
+
+                    batched_records = []
+
+        if batched_records:
+            write_records_and_update_state(
+                c, stream, batched_records, last_updated)
 
 
 @backoff.on_exception(backoff.expo,
@@ -147,6 +155,7 @@ def run_campaign_request(ctx, c, stream, last_updated):
                       factor=2)
 def run_list_request(ctx, l, stream, last_updated):
     header = None
+    batched_records = []
 
     with ctx.client.put(
             'list', l, last_updated
@@ -154,16 +163,18 @@ def run_list_request(ctx, l, stream, last_updated):
         for r in res.iter_lines():
             if r:
                 if header:
-                    record = dict(
-                        zip(header, json.loads(r.decode('utf-8'))))
-                    write_records(stream, [record])
-                    last_updated[l['id']] = convert_to_iso_string(
-                        get_latest_list_update(
-                            record,
-                            last_updated[l['id']]
-                        ))
+                    batched_records = batched_records + [dict(
+                        zip(header, json.loads(r.decode('utf-8'))))]
+
+                    if len(batched_records) > 500:
+                        write_records_and_update_state(
+                            l, stream, batched_records, last_updated)
                 else:
                     header = json.loads(r.decode('utf-8'))
+
+        if batched_records:
+            write_records_and_update_state(
+                l, stream, batched_records, last_updated)
 
 
 def call_stream_incremental(ctx, stream):
