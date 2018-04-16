@@ -69,12 +69,9 @@ class Client(object):
         req = self.create_get_request(path, params)
         return self.request_with_handling(req, *args, **kwargs)
 
-    @backoff.on_exception(backoff.expo,
-                          RemoteDisconnected,
-                          max_tries=10,
-                          factor=2)
     def put(self, path, entity, last_updated):
         return requests.put(self.url(path),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated),
-                            stream=True)
+                            stream=True,
+                            timeout=15 * 60)

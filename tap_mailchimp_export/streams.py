@@ -1,6 +1,6 @@
 import singer
 from .schemas import IDS
-import requests
+import time
 import pendulum
 import uuid
 import json
@@ -125,56 +125,73 @@ def convert_to_iso_string(date):
     return pendulum.parse(date).to_iso8601_string()
 
 
-@backoff.on_exception(backoff.expo,
-                      requests.exceptions.ConnectionError,
-                      max_tries=10,
-                      factor=2)
-def run_campaign_request(ctx, c, stream, last_updated):
+def run_campaign_request(ctx, c, stream, last_updated, retries=0):
     batched_records = []
-    with ctx.client.put(
-            'campaignSubscriberActivity', c, last_updated
-    ) as res:
-        for r in res.iter_lines():
-            if r:
-                batched_records = batched_records + transform_event(r, c)
 
-                if len(batched_records) > 500:
+    if retries < 3:
+        try:
+            with ctx.client.put(
+                    'campaignSubscriberActivity', c, last_updated
+            ) as res:
+                for r in res.iter_lines():
+                    if r:
+                        batched_records = batched_records + transform_event(r, c)
+
+                        if len(batched_records) > 500:
+                            write_records_and_update_state(
+                                c, stream, batched_records, last_updated)
+
+                            batched_records = []
+
+                if batched_records:
+                    pass
                     write_records_and_update_state(
                         c, stream, batched_records, last_updated)
+        except Exception as e:
+            logger.info(e)
+            logger.info('Waiting 30 seconds - then retrying')
+            time.sleep(30)
+            retries += 1
+            run_campaign_request(ctx, c, stream, last_updated, retries)
 
-                    batched_records = []
-
-        if batched_records:
-            write_records_and_update_state(
-                c, stream, batched_records, last_updated)
+    else:
+        logger.info('Too many fails for %s, continuing to others' % c['id'])
 
 
-@backoff.on_exception(backoff.expo,
-                      requests.exceptions.ConnectionError,
-                      max_tries=10,
-                      factor=2)
-def run_list_request(ctx, l, stream, last_updated):
+def run_list_request(ctx, l, stream, last_updated, retries=0):
     header = None
     batched_records = []
 
-    with ctx.client.put(
-            'list', l, last_updated
-    ) as res:
-        for r in res.iter_lines():
-            if r:
-                if header:
-                    batched_records = batched_records + [dict(
-                        zip(header, json.loads(r.decode('utf-8'))))]
+    if retries < 3:
+        try:
+            with ctx.client.put(
+                    'list', l, last_updated
+            ) as res:
+                for r in res.iter_lines():
+                    if r:
+                        if header:
+                            batched_records = batched_records + [dict(
+                                zip(header, json.loads(r.decode('utf-8'))))]
 
-                    if len(batched_records) > 500:
-                        write_records_and_update_state(
-                            l, stream, batched_records, last_updated)
-                else:
-                    header = json.loads(r.decode('utf-8'))
+                            if len(batched_records) > 500:
+                                write_records_and_update_state(
+                                    l, stream, batched_records, last_updated)
+                        else:
+                            header = json.loads(r.decode('utf-8'))
 
-        if batched_records:
-            write_records_and_update_state(
-                l, stream, batched_records, last_updated)
+                if batched_records:
+                    write_records_and_update_state(
+                        l, stream, batched_records, last_updated)
+
+        except Exception as e:
+            logger.info(e)
+            logger.info('Waiting 30 seconds - then retrying')
+            time.sleep(30)
+            retries += 1
+            run_list_request(ctx, l, stream, last_updated, retries)
+
+    else:
+        logger.info('Too many fails for %s, continuing to others' % l['id'])
 
 
 def call_stream_incremental(ctx, stream):
@@ -183,9 +200,13 @@ def call_stream_incremental(ctx, stream):
 
     stream_resource = stream.split('_')[0]
     for e in getattr(ctx, stream_resource + 's'):
-        logger.info('querying campaign: %s' % e['id'])
-
         ctx.update_latest(e['id'], last_updated)
+
+        logger.info('querying {stream} id: {id}, since: {since}'.format(
+            stream=stream_resource,
+            id=e['id'],
+            since=last_updated[e['id']],
+        ))
 
         handlers = {
             'campaign': run_campaign_request,
