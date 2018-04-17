@@ -144,7 +144,6 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                             batched_records = []
 
                 if batched_records:
-                    pass
                     write_records_and_update_state(
                         c, stream, batched_records, last_updated)
         except Exception as e:
