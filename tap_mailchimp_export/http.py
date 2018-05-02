@@ -3,6 +3,7 @@ from singer import metrics
 import backoff
 
 CAMPAIGN_URI = "https://{dc}.api.mailchimp.com/export/1.0/"  # noqa
+V3_URI = "https://{dc}.api.mailchimp.com/3.0/{stream}"
 
 
 class RateLimitException(Exception):
@@ -48,8 +49,15 @@ class Client(object):
     def url(self, path):
         return _join(CAMPAIGN_URI, path).format(dc=self.dc)
 
+    def url_v3(self, stream):
+        return V3_URI.format(dc=self.dc, stream=stream)
+
     def create_get_request(self, path, params):
         return requests.Request(method="GET", url=self.url(path),
+                                params=params)
+
+    def create_get_request_v3(self, stream, params):
+        return requests.Request(method="GET", url=self.url_v3(stream),
                                 params=params)
 
     @backoff.on_exception(backoff.expo,
@@ -67,6 +75,10 @@ class Client(object):
 
     def GET(self, path, params, *args, **kwargs):
         req = self.create_get_request(path, params)
+        return self.request_with_handling(req, *args, **kwargs)
+
+    def GET_v3(self, stream, params, *args, **kwargs):
+        req = self.create_get_request_v3(stream, params)
         return self.request_with_handling(req, *args, **kwargs)
 
     def put(self, path, entity, last_updated):

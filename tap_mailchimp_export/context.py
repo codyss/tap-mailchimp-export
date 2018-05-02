@@ -100,8 +100,8 @@ class Context(object):
         self.campaigns = [
             {
                 'id': c['id'],
-                'title': c['title'],
-                'list_id': c['list_id'],
+                'title': c['settings']['title'],
+                'list_id': c['recipients']['list_id'],
             } for c in campaigns
         ]
 

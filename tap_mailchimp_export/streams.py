@@ -222,7 +222,18 @@ def call_stream_incremental(ctx, stream):
 
 
 def call_stream_full(ctx, stream):
-    records = ctx.mailsnake.__getattr__(stream)()['data']
+    records = []
+    offset = 0
+    while True:
+        response = ctx.client.GET_v3(
+            stream, {'offset': offset}, {'tap_stream_id': stream}
+        )
+        content = json.loads(response.content)
+        records += content[stream]
+        item_count = content['total_items']
+        if len(content[stream]) == 0:
+            break
+        offset += len(content[stream])
     write_records(stream, records)
 
     getattr(ctx, 'save_%s_meta' % stream)(records)
