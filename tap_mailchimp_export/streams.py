@@ -175,6 +175,8 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
                             if len(batched_records) > 500:
                                 write_records_and_update_state(
                                     l, stream, batched_records, last_updated)
+
+                                batched_records = []
                         else:
                             header = json.loads(r.decode('utf-8'))
 
