@@ -5,7 +5,7 @@ import signal
 class TimeoutError(Exception):
 	pass
 
-def timeout(seconds=15, error_message='Request timed out...'):
+def timeout(seconds=60 * 5, error_message='Request timed out...'):
 	def decorator(func):
 		def _handle_timeout(signum, frame):
 			raise TimeoutError(error_message)
