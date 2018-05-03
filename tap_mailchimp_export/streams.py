@@ -133,7 +133,7 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
             with ctx.client.put(
                     'campaignSubscriberActivity', c, last_updated
             ) as res:
-                for r in res.iter_lines(chunk_size=10):
+                for r in res.iter_lines():
                     if r:
                         batched_records = batched_records + transform_event(r, c)
 
