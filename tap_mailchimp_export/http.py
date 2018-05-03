@@ -1,5 +1,6 @@
 import requests
 from singer import metrics
+from .timeout import timeout
 import backoff
 
 CAMPAIGN_URI = "https://{dc}.api.mailchimp.com/export/1.0/"  # noqa
@@ -81,9 +82,9 @@ class Client(object):
         req = self.create_get_request_v3(stream, params)
         return self.request_with_handling(req, *args, **kwargs)
 
+    @timeout()
     def put(self, path, entity, last_updated):
         return requests.put(self.url(path),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated),
-                            stream=True,
-                            timeout=15)
+                            stream=True)
