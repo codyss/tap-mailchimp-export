@@ -85,5 +85,4 @@ class Client(object):
         return requests.put(self.url(path),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated),
-                            stream=True,
                             timeout=15 * 60)
