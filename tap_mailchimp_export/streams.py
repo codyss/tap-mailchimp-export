@@ -134,7 +134,6 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                     'campaignSubscriberActivity', c, last_updated
             ) as res:
                 for r in res.iter_lines():
-                    print('line: {}'.format(r))
                     if r:
                         batched_records = batched_records + transform_event(r, c)
 
