@@ -276,7 +276,8 @@ def call_stream_incremental(ctx, stream):
 
     stream_resource = stream.split('_')[0]
     for e in getattr(ctx, stream_resource + 's'):
-        if not check_campaign_send_date(e['sent_at']):
+        if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY and \
+                not check_campaign_send_date(e['sent_at']):
             continue
 
         ctx.update_latest(e['id'], last_updated)
