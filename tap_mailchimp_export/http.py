@@ -95,7 +95,6 @@ class Client(object):
 
     @timeout()
     def put(self, path, entity, last_updated):
-        import ipdb; ipdb.set_trace()
         return requests.put(self.url(path),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated),

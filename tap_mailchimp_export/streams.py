@@ -5,6 +5,7 @@ import pendulum
 import uuid
 import json
 from collections import defaultdict
+from time import sleep
 
 import backoff
 
@@ -31,7 +32,7 @@ class BOOK(object):
     CAMPAIGNS = [IDS.CAMPAIGNS]
     CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY, "timestamp"]
     LISTS = [IDS.LISTS]
-    LIST_MEMBERS = [IDS.LIST_MEMBERS, "last_changed"]
+    LIST_MEMBERS = [IDS.LIST_MEMBERS, "LAST_CHANGED"]
 
     @classmethod
     def return_bookmark_path(cls, stream):
@@ -136,6 +137,7 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                     'campaignSubscriberActivity', c, last_updated
             ) as res:
                 for r in res.iter_lines():
+                    sleep(0.1)
                     if r:
                         batched_records = batched_records + transform_event(r, c)
 
@@ -169,6 +171,7 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
                     'list', l, last_updated
             ) as res:
                 for r in res.iter_lines():
+                    sleep(0.1)
                     if r:
                         if header:
                             batched_records = batched_records + [dict(
@@ -270,13 +273,12 @@ def call_stream_incremental(ctx, stream):
             since=last_updated[e['id']],
         ))
 
-        # handlers = {
-        #     'campaign': run_campaign_request,
-        #     'list': run_list_request
-        # }
+        handlers = {
+            'campaign': run_campaign_request,
+            'list': run_list_request
+        }
 
-        # handlers[stream_resource](ctx, e, stream, last_updated)
-        run_incremental_request_v3(ctx, e, stream, last_updated)
+        handlers[stream_resource](ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
             BOOK.return_bookmark_path(stream),
