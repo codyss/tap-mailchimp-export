@@ -10,6 +10,8 @@ import backoff
 
 logger = singer.get_logger()
 
+BATCH_SIZE = 500
+PAGE_SIZE = 500
 
 class RemoteDisconnected(Exception):
     pass
@@ -27,9 +29,9 @@ def write_records(tap_stream_id, records):
 
 class BOOK(object):
     CAMPAIGNS = [IDS.CAMPAIGNS]
-    CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSRIBER_ACTIVITY, "timestamp"]
+    CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY, "timestamp"]
     LISTS = [IDS.LISTS]
-    LIST_MEMBERS = [IDS.LIST_MEMBERS, "LAST_CHANGED"]
+    LIST_MEMBERS = [IDS.LIST_MEMBERS, "last_changed"]
 
     @classmethod
     def return_bookmark_path(cls, stream):
@@ -194,6 +196,65 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
     else:
         logger.info('Too many fails for %s, continuing to others' % l['id'])
 
+def pare_records(new_records, last_updated):
+    pared_records = []
+    for record in new_records:
+        activity = record['activity']
+        if not activity:
+            continue
+        record['activity'] = [
+            action for action in activity if activity['timestamp'] >
+            last_updated 
+        ]
+        if record['activity']:
+            pared_records.append(record)
+    return pared_records
+
+def run_incremental_request_v3(ctx, entity, stream, last_updated, retries=0):
+    offset = 0
+    batched_records = []
+    total_items = 0
+    items_recieved = 0
+
+    while True:
+        params = {
+            'offset': offset,
+            'count': PAGE_SIZE
+        }
+        if stream == IDS.LIST_MEMBERS:
+            params['since_last_changed'] = last_updated
+
+        try:
+            response = ctx.client.GET_v3(stream, params, item_id=entity['id'])
+        except Exception as e:
+            if retries >= 3:
+                raise e
+            retries += 1
+            logger.info(e)
+            logger.info('Waiting 30 seconds - then retrying')
+            time.sleep(30)
+            run_incremental_request_v3(ctx, entity, stream, last_updated, retries)
+
+        content = json.loads(response.content)
+        if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
+            records = content['emails']
+            batched_records += pare_records(records, last_updated)
+        else:
+            records = content['members']
+            batched_records += records
+        total_items = content['total_items']
+        items_recieved += len(records)
+        logger.info('Recieved {} records'.format(items_recieved))
+        offset += len(records)
+
+        if len(batched_records) > BATCH_SIZE:
+            write_records_and_update_state(
+                entity, stream, batched_records, last_updated
+            )
+            batched_records = []
+
+        if items_recieved >= total_items or len(records) == 0:
+            break
 
 def call_stream_incremental(ctx, stream):
     last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(stream)) or \
@@ -209,12 +270,13 @@ def call_stream_incremental(ctx, stream):
             since=last_updated[e['id']],
         ))
 
-        handlers = {
-            'campaign': run_campaign_request,
-            'list': run_list_request
-        }
+        # handlers = {
+        #     'campaign': run_campaign_request,
+        #     'list': run_list_request
+        # }
 
-        handlers[stream_resource](ctx, e, stream, last_updated)
+        # handlers[stream_resource](ctx, e, stream, last_updated)
+        run_incremental_request_v3(ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
             BOOK.return_bookmark_path(stream),
@@ -227,9 +289,7 @@ def call_stream_full(ctx, stream):
     records = []
     offset = 0
     while True:
-        response = ctx.client.GET_v3(
-            stream, {'offset': offset}, {'tap_stream_id': stream}
-        )
+        response = ctx.client.GET_v3(stream, params={'offset': offset})
         content = json.loads(response.content)
         records += content[stream]
         item_count = content['total_items']

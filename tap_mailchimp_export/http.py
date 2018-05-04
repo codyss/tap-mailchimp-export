@@ -3,9 +3,13 @@ from singer import metrics
 from .timeout import timeout
 import backoff
 
-CAMPAIGN_URI = "https://{dc}.api.mailchimp.com/export/1.0/"  # noqa
-V3_URI = "https://{dc}.api.mailchimp.com/3.0/{stream}"
+FULL_URI = "https://{dc}.api.mailchimp.com/3.0/{stream}"
+CAMPAIGN_ACTIVITY_URI = "https://{dc}.api.mailchimp.com/3.0/reports/" \
+                        "{campaign_id}/email-activity"
+LIST_MEMBERS = FULL_URI + "/{list_id}/members"
 
+# Deprecated
+CAMPAIGN_URI = "https://{dc}.api.mailchimp.com/export/1.0/"  # noqa
 
 class RateLimitException(Exception):
     pass
@@ -50,15 +54,21 @@ class Client(object):
     def url(self, path):
         return _join(CAMPAIGN_URI, path).format(dc=self.dc)
 
-    def url_v3(self, stream):
-        return V3_URI.format(dc=self.dc, stream=stream)
+    def url_v3(self, stream, item_id):
+        if not item_id:
+            return FULL_URI.format(dc=self.dc, stream=stream)
+        if stream == 'list_members':
+            return LIST_MEMBERS.format(
+                dc=self.dc, list_id=item_id, stream='lists'
+            )
+        return CAMPAIGN_ACTIVITY_URI.format(dc=self.dc, campaign_id=item_id)
 
     def create_get_request(self, path, params):
         return requests.Request(method="GET", url=self.url(path),
                                 params=params)
 
-    def create_get_request_v3(self, stream, params):
-        return requests.Request(method="GET", url=self.url_v3(stream),
+    def create_get_request_v3(self, stream, item_id, params):
+        return requests.Request(method="GET", url=self.url_v3(stream, item_id),
                                 params=params)
 
     @backoff.on_exception(backoff.expo,
@@ -78,12 +88,14 @@ class Client(object):
         req = self.create_get_request(path, params)
         return self.request_with_handling(req, *args, **kwargs)
 
-    def GET_v3(self, stream, params, *args, **kwargs):
-        req = self.create_get_request_v3(stream, params)
-        return self.request_with_handling(req, *args, **kwargs)
+
+    def GET_v3(self, stream, params={}, item_id=None):
+        req = self.create_get_request_v3(stream, item_id, params)
+        return self.request_with_handling(req, stream)
 
     @timeout()
     def put(self, path, entity, last_updated):
+        import ipdb; ipdb.set_trace()
         return requests.put(self.url(path),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated),
