@@ -4,15 +4,20 @@ import time
 import pendulum
 import uuid
 import json
+import pytz
 from collections import defaultdict
 from time import sleep
+from dateutil import parser
+from dateutil.tz import tzutc
+from datetime import datetime, timedelta
 
 import backoff
 
 logger = singer.get_logger()
 
-BATCH_SIZE = 500
-PAGE_SIZE = 500
+BATCH_SIZE = 1000
+PAGE_SIZE = 1000
+CAMAPAIGN_SEND_CHECK_DAYS = 7
 
 class RemoteDisconnected(Exception):
     pass
@@ -259,26 +264,42 @@ def run_incremental_request_v3(ctx, entity, stream, last_updated, retries=0):
         if items_recieved >= total_items or len(records) == 0:
             break
 
+def check_campaign_send_date(sent_at):
+    if datetime.utcnow().replace(tzinfo=pytz.utc) - parser.parse(sent_at) > \
+                            timedelta(days=CAMAPAIGN_SEND_CHECK_DAYS):
+        return False
+    return True
+
 def call_stream_incremental(ctx, stream):
     last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(stream)) or \
                    defaultdict(str)
 
     stream_resource = stream.split('_')[0]
     for e in getattr(ctx, stream_resource + 's'):
+        if not check_campaign_send_date(e['sent_at']):
+            continue
+
         ctx.update_latest(e['id'], last_updated)
 
-        logger.info('querying {stream} id: {id}, since: {since}'.format(
-            stream=stream_resource,
-            id=e['id'],
-            since=last_updated[e['id']],
-        ))
+        logger.info('querying {stream} id: {id}, since: {since}, sent: {sent}'\
+            .format(
+                stream=stream_resource,
+                id=e['id'],
+                since=last_updated[e['id']],
+                sent=e['sent_at'],
+            )
+        )
 
-        handlers = {
-            'campaign': run_campaign_request,
-            'list': run_list_request
-        }
+        # Below is the setup for the deprecated export API
 
-        handlers[stream_resource](ctx, e, stream, last_updated)
+        # handlers = {
+        #     'campaign': run_campaign_request,
+        #     'list': run_list_request
+        # }
+
+        # handlers[stream_resource](ctx, e, stream, last_updated)
+
+        run_incremental_request_v3(ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
             BOOK.return_bookmark_path(stream),

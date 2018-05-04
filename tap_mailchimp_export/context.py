@@ -102,6 +102,7 @@ class Context(object):
                 'id': c['id'],
                 'title': c['settings']['title'],
                 'list_id': c['recipients']['list_id'],
+                'sent_at': c['send_time'],
             } for c in campaigns
         ]
 
