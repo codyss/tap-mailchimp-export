@@ -244,7 +244,7 @@ def run_incremental_request_v3(ctx, entity, stream, last_updated, retries=0):
             batched_records += records
         total_items = content['total_items']
         items_recieved += len(records)
-        logger.info('Recieved {} records'.format(items_recieved))
+        logger.info('Received {}/{} records'.format(items_recieved,total_items))
         offset += len(records)
 
         if len(batched_records) > BATCH_SIZE:
