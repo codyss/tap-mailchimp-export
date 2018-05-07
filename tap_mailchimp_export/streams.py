@@ -183,16 +183,16 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
                                 zip(header, json.loads(r.decode('utf-8'))))]
 
                             if len(batched_records) > 500:
-                                write_records_and_update_state(
-                                    l, stream, batched_records, last_updated)
+                                # write_records_and_update_state(
+                                #     l, stream, batched_records, last_updated)
 
                                 batched_records = []
                         else:
                             header = json.loads(r.decode('utf-8'))
 
                 if batched_records:
-                    write_records_and_update_state(
-                        l, stream, batched_records, last_updated)
+                    # write_records_and_update_state(
+                    #     l, stream, batched_records, last_updated)
 
         except Exception as e:
             logger.info(e)
@@ -282,10 +282,6 @@ def call_stream_incremental(ctx, stream):
 
     stream_resource = stream.split('_')[0]
     for e in getattr(ctx, stream_resource + 's'):
-        if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY and \
-                not check_campaign_send_date(e['sent_at']):
-            continue
-
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream} id: {id}, since: {since}'.format(
@@ -294,16 +290,12 @@ def call_stream_incremental(ctx, stream):
             since=last_updated[e['id']],
         ))
 
-        # Below is the setup for the deprecated export API
-
         handlers = {
             'campaign': run_campaign_request,
             'list': run_list_request
         }
 
         handlers[stream_resource](ctx, e, stream, last_updated)
-
-        # run_incremental_request_v3(ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
             BOOK.return_bookmark_path(stream),
