@@ -193,6 +193,7 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
                 if batched_records:
                     # write_records_and_update_state(
                     #     l, stream, batched_records, last_updated)
+                    pass
 
         except Exception as e:
             logger.info(e)
