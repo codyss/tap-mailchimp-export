@@ -243,8 +243,8 @@ def call_stream_full(ctx, stream):
     while True:
         params = {
             'offset': offset,
-            'since_date_created': datetime.now() - \
-                timedelta(days=ctx.update_days)
+            # 'since_date_created': datetime.now() - \
+                # timedelta(days=ctx.update_days)
         }
         response = ctx.client.GET_v3(stream, params=params)
         content = json.loads(response.content)

@@ -9,6 +9,7 @@ from .http import Client
 def convert_to_mc_date(iso_string):
     return pendulum.parse(iso_string).to_datetime_string()
 
+DEFAULT_UPDATE_DAYS = 7
 
 class Context(object):
     """Represents a collection of global objects necessary for performing
@@ -33,6 +34,8 @@ class Context(object):
         self.lists = []
         self.selected_stream_ids = None
         self.now = datetime.utcnow()
+        # self.update_days = int(config.get('update_days') or DEFAULT_UPDATE_DAYS)
+        # self.timeout = int(config.get('request_timeout_minutes') or 0) * 60
 
     @property
     def catalog(self):
