@@ -88,7 +88,6 @@ class Client(object):
         req = self.create_get_request(path, params)
         return self.request_with_handling(req, *args, **kwargs)
 
-
     def GET_v3(self, stream, params={}, item_id=None):
         req = self.create_get_request_v3(stream, item_id, params)
         return self.request_with_handling(req, stream)

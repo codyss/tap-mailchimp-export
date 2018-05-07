@@ -142,19 +142,19 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                     'campaignSubscriberActivity', c, last_updated
             ) as res:
                 for r in res.iter_lines():
-                    sleep(0.1)
                     if r:
                         batched_records = batched_records + transform_event(r, c)
 
                         if len(batched_records) > 500:
-                            write_records_and_update_state(
-                                c, stream, batched_records, last_updated)
+                            # write_records_and_update_state(
+                            #     c, stream, batched_records, last_updated)
 
                             batched_records = []
 
                 if batched_records:
-                    write_records_and_update_state(
-                        c, stream, batched_records, last_updated)
+                    # write_records_and_update_state(
+                    #     c, stream, batched_records, last_updated)
+                    pass
         except Exception as e:
             logger.info(e)
             logger.info('Waiting 30 seconds - then retrying')
@@ -176,7 +176,6 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
                     'list', l, last_updated
             ) as res:
                 for r in res.iter_lines():
-                    sleep(0.1)
                     if r:
                         if header:
                             batched_records = batched_records + [dict(
@@ -231,6 +230,9 @@ def run_incremental_request_v3(ctx, entity, stream, last_updated, retries=0):
         }
         if stream == IDS.LIST_MEMBERS:
             params['since_last_changed'] = last_updated
+        else:
+            params['fields'] = 'total_items,emails.email_address,emails.activity,' + \
+                'emails.activity.action,emails.activity.timestamp,'
 
         try:
             response = ctx.client.GET_v3(stream, params, item_id=entity['id'])
@@ -254,6 +256,9 @@ def run_incremental_request_v3(ctx, entity, stream, last_updated, retries=0):
         items_recieved += len(records)
         logger.info('Received {}/{} records'.format(items_recieved,total_items))
         offset += len(records)
+
+        if batched_records:
+            raise ValueError
 
         if len(batched_records) > BATCH_SIZE:
             write_records_and_update_state(
@@ -282,25 +287,22 @@ def call_stream_incremental(ctx, stream):
 
         ctx.update_latest(e['id'], last_updated)
 
-        logger.info('querying {stream} id: {id}, since: {since}, sent: {sent}'\
-            .format(
-                stream=stream_resource,
-                id=e['id'],
-                since=last_updated[e['id']],
-                sent=e['sent_at'],
-            )
-        )
+        logger.info('querying {stream} id: {id}, since: {since}'.format(
+            stream=stream_resource,
+            id=e['id'],
+            since=last_updated[e['id']],
+        ))
 
         # Below is the setup for the deprecated export API
 
-        # handlers = {
-        #     'campaign': run_campaign_request,
-        #     'list': run_list_request
-        # }
+        handlers = {
+            'campaign': run_campaign_request,
+            'list': run_list_request
+        }
 
-        # handlers[stream_resource](ctx, e, stream, last_updated)
+        handlers[stream_resource](ctx, e, stream, last_updated)
 
-        run_incremental_request_v3(ctx, e, stream, last_updated)
+        # run_incremental_request_v3(ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
             BOOK.return_bookmark_path(stream),
