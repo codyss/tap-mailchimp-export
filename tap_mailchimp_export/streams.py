@@ -150,6 +150,7 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                             #     c, stream, batched_records, last_updated)
 
                             batched_records = []
+                            logger.info('Would write here')
 
                 if batched_records:
                     # write_records_and_update_state(
