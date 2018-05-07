@@ -93,8 +93,8 @@ class Client(object):
         return self.request_with_handling(req, stream)
 
     @timeout()
-    def put(self, path, entity, last_updated):
-        return requests.put(self.url(path),
+    def post(self, path, entity, last_updated):
+        return requests.post(self.url(path),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated),
                             stream=True)

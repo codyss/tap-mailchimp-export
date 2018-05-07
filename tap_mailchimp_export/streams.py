@@ -138,7 +138,7 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
 
     if retries < 3:
         try:
-            with ctx.client.put(
+            with ctx.client.post(
                     'campaignSubscriberActivity', c, last_updated
             ) as res:
                 for r in res.iter_lines():
@@ -146,16 +146,15 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                         batched_records = batched_records + transform_event(r, c)
 
                         if len(batched_records) > 500:
-                            # write_records_and_update_state(
-                            #     c, stream, batched_records, last_updated)
+                            write_records_and_update_state(
+                                c, stream, batched_records, last_updated)
 
                             batched_records = []
-                            logger.info('Would write here')
 
-                if batched_records:
-                    # write_records_and_update_state(
-                    #     c, stream, batched_records, last_updated)
-                    pass
+            if batched_records:
+                write_records_and_update_state(
+                    c, stream, batched_records, last_updated)
+
         except Exception as e:
             logger.info(e)
             logger.info('Waiting 30 seconds - then retrying')
@@ -173,7 +172,7 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
 
     if retries < 3:
         try:
-            with ctx.client.put(
+            with ctx.client.post(
                     'list', l, last_updated
             ) as res:
                 for r in res.iter_lines():
@@ -183,17 +182,16 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
                                 zip(header, json.loads(r.decode('utf-8'))))]
 
                             if len(batched_records) > 500:
-                                # write_records_and_update_state(
-                                #     l, stream, batched_records, last_updated)
+                                write_records_and_update_state(
+                                    l, stream, batched_records, last_updated)
 
                                 batched_records = []
                         else:
                             header = json.loads(r.decode('utf-8'))
 
                 if batched_records:
-                    # write_records_and_update_state(
-                    #     l, stream, batched_records, last_updated)
-                    pass
+                    write_records_and_update_state(
+                        l, stream, batched_records, last_updated)
 
         except Exception as e:
             logger.info(e)
@@ -204,72 +202,6 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
 
     else:
         logger.info('Too many fails for %s, continuing to others' % l['id'])
-
-def pare_records(new_records, last_updated):
-    pared_records = []
-    for record in new_records:
-        activity = record['activity']
-        if not activity:
-            continue
-        record['activity'] = [
-            action for action in activity if activity['timestamp'] >
-            last_updated 
-        ]
-        if record['activity']:
-            pared_records.append(record)
-    return pared_records
-
-def run_incremental_request_v3(ctx, entity, stream, last_updated, retries=0):
-    offset = 0
-    batched_records = []
-    total_items = 0
-    items_recieved = 0
-
-    while True:
-        params = {
-            'offset': offset,
-            'count': PAGE_SIZE
-        }
-        if stream == IDS.LIST_MEMBERS:
-            params['since_last_changed'] = last_updated
-        else:
-            params['fields'] = 'total_items,emails.email_address,emails.activity,' + \
-                'emails.activity.action,emails.activity.timestamp,'
-
-        try:
-            response = ctx.client.GET_v3(stream, params, item_id=entity['id'])
-        except Exception as e:
-            if retries >= 3:
-                raise e
-            retries += 1
-            logger.info(e)
-            logger.info('Waiting 30 seconds - then retrying')
-            time.sleep(30)
-            run_incremental_request_v3(ctx, entity, stream, last_updated, retries)
-
-        content = json.loads(response.content)
-        if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
-            records = content['emails']
-            batched_records += pare_records(records, last_updated)
-        else:
-            records = content['members']
-            batched_records += records
-        total_items = content['total_items']
-        items_recieved += len(records)
-        logger.info('Received {}/{} records'.format(items_recieved,total_items))
-        offset += len(records)
-
-        if batched_records:
-            raise ValueError
-
-        if len(batched_records) > BATCH_SIZE:
-            write_records_and_update_state(
-                entity, stream, batched_records, last_updated
-            )
-            batched_records = []
-
-        if items_recieved >= total_items or len(records) == 0:
-            break
 
 def check_campaign_send_date(sent_at):
     if datetime.utcnow().replace(tzinfo=pytz.utc) - parser.parse(sent_at) > \
@@ -309,7 +241,12 @@ def call_stream_full(ctx, stream):
     records = []
     offset = 0
     while True:
-        response = ctx.client.GET_v3(stream, params={'offset': offset})
+        params = {
+            'offset': offset,
+            'since_date_created': datetime.now() - \
+                timedelta(days=ctx.update_days)
+        }
+        response = ctx.client.GET_v3(stream, params=params)
         content = json.loads(response.content)
         records += content[stream]
         item_count = content['total_items']
