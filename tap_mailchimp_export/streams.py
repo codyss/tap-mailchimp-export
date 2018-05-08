@@ -147,9 +147,9 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                 if r:
                     batched_records = batched_records + transform_event(r, c)
 
-            if len(batched_records) > 500:
-                write_records_and_update_state(
-                    c, stream, batched_records, last_updated)
+                if len(batched_records) > 500:
+                    write_records_and_update_state(
+                        c, stream, batched_records, last_updated)
 
                 batched_records = []
 
