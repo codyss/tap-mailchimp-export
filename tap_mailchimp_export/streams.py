@@ -251,6 +251,7 @@ def call_stream_full(ctx, stream):
             }
         else:
             params = {
+                'offset': offset,
                 'since_date_created': since_date_created
             }
 
