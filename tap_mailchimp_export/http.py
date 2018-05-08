@@ -92,9 +92,9 @@ class Client(object):
         req = self.create_get_request_v3(stream, item_id, params)
         return self.request_with_handling(req, stream)
 
-    @timeout()
     def post(self, path, entity, last_updated):
         return requests.post(self.url(path),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated),
+                            # timeout=15 * 60,
                             stream=True)

@@ -228,7 +228,6 @@ def call_stream_incremental(ctx, stream):
             'campaign': run_campaign_request,
             'list': run_list_request
         }
-
         handlers[stream_resource](ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
@@ -242,7 +241,6 @@ def call_stream_full(ctx, stream):
     records = []
     offset = 0
     while True:
-        start_date = convert_to_mc_date(ctx.config['start_date'])
         since_date_created = convert_to_mc_date(ctx.config['start_date'])
         if stream == 'campaigns':
             params = {

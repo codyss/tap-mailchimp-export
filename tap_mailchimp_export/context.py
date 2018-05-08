@@ -52,6 +52,7 @@ class Context(object):
                 last_updated.get(id, self.get_start_date())
             ),
             'apikey': self.config['apikey'],
+            'include_empty': True
         }
 
     def get_bookmark(self, path):
