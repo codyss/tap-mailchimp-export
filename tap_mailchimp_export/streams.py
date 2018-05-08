@@ -142,18 +142,16 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
 
     if retries < 3:
         try:
-            with ctx.client.post(
-                    'campaignSubscriberActivity', c, last_updated
-            ) as res:
-                for r in res.iter_lines():
-                    if r:
-                        batched_records = batched_records + transform_event(r, c)
+            res = ctx.client.post('campaignSubscriberActivity', c, last_updated)
+            for r in res.iter_lines():
+                if r:
+                    batched_records = batched_records + transform_event(r, c)
 
-                        if len(batched_records) > 500:
-                            write_records_and_update_state(
-                                c, stream, batched_records, last_updated)
+            if len(batched_records) > 500:
+                write_records_and_update_state(
+                    c, stream, batched_records, last_updated)
 
-                            batched_records = []
+                batched_records = []
 
             if batched_records:
                 write_records_and_update_state(
