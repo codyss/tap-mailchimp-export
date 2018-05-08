@@ -88,6 +88,9 @@ def transform_event(record, campaign):
     """
 
     record = record.decode('utf-8')
+    obj = json.loads(record)
+    if 'error' in obj.keys():
+        raise Exception(record)
 
     try:
         (email, events), = json.loads(record).items()
@@ -216,9 +219,6 @@ def call_stream_incremental(ctx, stream):
 
     stream_resource = stream.split('_')[0]
     for e in getattr(ctx, stream_resource + 's'):
-        if e['id'] != '4a7919926c':
-            logger.info(e['id'])
-            continue
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream} id: {id}, since: {since}'.format(
