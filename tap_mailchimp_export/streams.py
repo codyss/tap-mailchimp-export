@@ -1,5 +1,6 @@
 import singer
 from .schemas import IDS
+from .context import convert_to_mc_date
 import time
 import pendulum
 import uuid
@@ -241,11 +242,18 @@ def call_stream_full(ctx, stream):
     records = []
     offset = 0
     while True:
-        params = {
-            'offset': offset,
-            # 'since_date_created': datetime.now() - \
-                # timedelta(days=ctx.update_days)
-        }
+        start_date = convert_to_mc_date(ctx.config['start_date'])
+        since_date_created = convert_to_mc_date(ctx.config['start_date'])
+        if stream == 'campaigns':
+            params = {
+                'offset': offset,
+                'since_send_time': since_date_created
+            }
+        else:
+            params = {
+                'since_date_created': since_date_created
+            }
+
         response = ctx.client.GET_v3(stream, params=params)
         content = json.loads(response.content)
         records += content[stream]
