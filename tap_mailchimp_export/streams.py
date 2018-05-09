@@ -151,7 +151,7 @@ def run_campaign_request(ctx, c, stream, last_updated, retries=0):
                     write_records_and_update_state(
                         c, stream, batched_records, last_updated)
 
-                batched_records = []
+                    batched_records = []
 
             if batched_records:
                 write_records_and_update_state(
@@ -217,6 +217,7 @@ def call_stream_incremental(ctx, stream):
 
     stream_resource = stream.split('_')[0]
     for e in getattr(ctx, stream_resource + 's'):
+        sleep(60)
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream} id: {id}, since: {since}'.format(
