@@ -87,7 +87,7 @@ def transform_event(record, campaign):
     :yield: enriched events to support downstream analytics
     """
 
-    record = record.decode('utf-8')
+    # record = record.decode('utf-8')
     obj = json.loads(record)
     if 'error' in obj.keys():
         raise Exception(record)
