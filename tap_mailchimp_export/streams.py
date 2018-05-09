@@ -217,7 +217,6 @@ def call_stream_incremental(ctx, stream):
 
     stream_resource = stream.split('_')[0]
     for e in getattr(ctx, stream_resource + 's'):
-        sleep(60)
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream} id: {id}, since: {since}'.format(
@@ -238,16 +237,23 @@ def call_stream_incremental(ctx, stream):
 
     return last_updated
 
+def earlier_date():
+    date_obj = datetime.now()
+    new_date = date_obj - timedelta(days=7)
+    return new_date.strftime("%Y-%m-%d")
 
 def call_stream_full(ctx, stream):
     records = []
     offset = 0
     while True:
         since_date_created = convert_to_mc_date(ctx.config['start_date'])
+        before_date_created = convert_to_mc_date(earlier_date())
         if stream == 'campaigns':
             params = {
                 'offset': offset,
-                'since_send_time': since_date_created
+                'since_send_time': since_date_created,
+                'before_send_time': before_date_created,
+                'status': 'sent'
             }
         else:
             params = {
