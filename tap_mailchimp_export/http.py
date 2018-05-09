@@ -95,6 +95,5 @@ class Client(object):
     def post(self, path, entity, last_updated):
         return requests.post(self.url(path),
                             params=self.ctx.get_params(entity['id'],
-                                                       last_updated),
-                            # timeout=15 * 60,
-                            stream=True)
+                                                       last_updated)
+                            )
