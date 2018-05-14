@@ -18,7 +18,7 @@ logger = singer.get_logger()
 
 BATCH_SIZE = 1000
 PAGE_SIZE = 1000
-CAMAPAIGN_SEND_CHECK_DAYS = 7
+LOOKBACK_DAYS = 7
 
 class RemoteDisconnected(Exception):
     pass
@@ -136,46 +136,14 @@ def write_records_and_update_state(entity, stream,
 def convert_to_iso_string(date):
     return pendulum.parse(date).to_iso8601_string()
 
-
-def run_campaign_request(ctx, c, stream, last_updated, retries=0):
-    batched_records = []
-
-    if retries < 3:
-        try:
-            res = ctx.client.post('campaignSubscriberActivity', c, last_updated)
-            for r in res.text.split('\n'):
-                if r:
-                    batched_records = batched_records + transform_event(r, c)
-
-                if len(batched_records) > 500:
-                    write_records_and_update_state(
-                        c, stream, batched_records, last_updated)
-
-                    batched_records = []
-
-            if batched_records:
-                write_records_and_update_state(
-                    c, stream, batched_records, last_updated)
-
-        except Exception as e:
-            logger.info(e)
-            logger.info('Waiting 30 seconds - then retrying')
-            time.sleep(30)
-            retries += 1
-            run_campaign_request(ctx, c, stream, last_updated, retries)
-
-    else:
-        logger.info('Too many fails for %s, continuing to others' % c['id'])
-
-
-def run_list_request(ctx, l, stream, last_updated, retries=0):
+def run_export_request(ctx, e, stream, last_updated, retries=0):
     header = None
     batched_records = []
 
     if retries < 3:
         try:
             with ctx.client.post(
-                    'list', l, last_updated
+                    stream, e, last_updated
             ) as res:
                 for r in res.iter_lines():
                     if r:
@@ -200,16 +168,13 @@ def run_list_request(ctx, l, stream, last_updated, retries=0):
             logger.info('Waiting 30 seconds - then retrying')
             time.sleep(30)
             retries += 1
-            run_list_request(ctx, l, stream, last_updated, retries)
+            run_export_request(ctx, l, stream, last_updated, retries)
 
     else:
         logger.info('Too many fails for %s, continuing to others' % l['id'])
 
-def check_campaign_send_date(sent_at):
-    if datetime.utcnow().replace(tzinfo=pytz.utc) - parser.parse(sent_at) > \
-                            timedelta(days=CAMAPAIGN_SEND_CHECK_DAYS):
-        return False
-    return True
+def run_v3_request(ctx, e, stream, last_updated, retries=0):
+    pass
 
 def call_stream_incremental(ctx, stream):
     last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(stream)) or \
@@ -226,8 +191,8 @@ def call_stream_incremental(ctx, stream):
         ))
 
         handlers = {
-            'campaign': run_campaign_request,
-            'list': run_list_request
+            'campaign': run_export_request,
+            'list': run_export_request
         }
         handlers[stream_resource](ctx, e, stream, last_updated)
 
@@ -237,29 +202,22 @@ def call_stream_incremental(ctx, stream):
 
     return last_updated
 
-def earlier_date():
+def get_since_date():
     date_obj = datetime.now()
-    new_date = date_obj - timedelta(days=7)
+    new_date = date_obj - timedelta(days=LOOKBACK_DAYS)
     return new_date.strftime("%Y-%m-%d")
 
 def call_stream_full(ctx, stream):
     records = []
     offset = 0
+    since_date = ctx.get_start_date() or self.get_since_date()
     while True:
-        since_date_created = convert_to_mc_date(ctx.config['start_date'])
-        before_date_created = convert_to_mc_date(earlier_date())
-        if stream == 'campaigns':
-            params = {
-                'offset': offset,
-                'since_send_time': since_date_created,
-                'before_send_time': before_date_created,
-                'status': 'sent'
-            }
-        else:
-            params = {
-                'offset': offset,
-                'since_date_created': since_date_created
-            }
+        params = {'offset': offset}
+        if stream == IDS.CAMPAIGNS:
+            params['since_send_time'] = since_date
+            params['status'] = 'sent'
+        elif stream == IDS.LISTS:
+            params['since_send_time'] = since_date
 
         response = ctx.client.GET_v3(stream, params=params)
         content = json.loads(response.content)
@@ -271,7 +229,6 @@ def call_stream_full(ctx, stream):
     write_records(stream, records)
 
     getattr(ctx, 'save_%s_meta' % stream)(records)
-
 
 def save_state(ctx, stream, bk):
     ctx.set_bookmark(BOOK.return_bookmark_path(stream), bk)

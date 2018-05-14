@@ -20,6 +20,11 @@ PK_FIELDS = {
     IDS.LIST_MEMBERS: ["email"],
 }
 
+EXPORT_API_PATH_NAMES = {
+    IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "campaignSubscriberActivity",
+    IDS.LIST_MEMBERS: "list"
+}
+
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
