@@ -136,8 +136,38 @@ def write_records_and_update_state(entity, stream,
 def convert_to_iso_string(date):
     return pendulum.parse(date).to_iso8601_string()
 
-def run_export_request(ctx, e, stream, last_updated, retries=0):
+def handle_campaign_subscriber_activity_response(response, stream, c, last_updated):
+    batched_records = []
+    for r in response.iter_lines():
+        if r:
+            batched_records = batched_records + transform_event(r, c)
+
+            if len(batched_records) > 500:
+                write_records_and_update_state(
+                    c, stream, batched_records, last_updated)
+
+                batched_records = []
+    return batched_records
+
+def handle_list_members_response(response, stream, l, last_updated):
     header = None
+    batched_records = []
+    for r in response.iter_lines():
+        if r:
+            if header:
+                batched_records = batched_records + [dict(
+                    zip(header, json.loads(r.decode('utf-8'))))]
+
+                if len(batched_records) > 500:
+                    write_records_and_update_state(
+                        l, stream, batched_records, last_updated)
+
+                    batched_records = []
+            else:
+                header = json.loads(r.decode('utf-8'))
+    return batched_records
+
+def run_export_request(ctx, e, stream, last_updated, retries=0):
     batched_records = []
 
     if retries < 3:
@@ -145,23 +175,19 @@ def run_export_request(ctx, e, stream, last_updated, retries=0):
             with ctx.client.post(
                     stream, e, last_updated
             ) as res:
-                for r in res.iter_lines():
-                    if r:
-                        if header:
-                            batched_records = batched_records + [dict(
-                                zip(header, json.loads(r.decode('utf-8'))))]
-
-                            if len(batched_records) > 500:
-                                write_records_and_update_state(
-                                    l, stream, batched_records, last_updated)
-
-                                batched_records = []
-                        else:
-                            header = json.loads(r.decode('utf-8'))
+                if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
+                    batched_records = \
+                        handle_campaign_subscriber_activity_response(
+                            res, stream, e, last_updated
+                        )
+                elif stream == IDS.LIST_MEMBERS:
+                    batched_records = handle_list_members_response(
+                        res, stream, e, last_updated
+                    )
 
                 if batched_records:
                     write_records_and_update_state(
-                        l, stream, batched_records, last_updated)
+                        e, stream, batched_records, last_updated)
 
         except Exception as e:
             logger.info(e)
