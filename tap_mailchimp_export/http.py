@@ -1,12 +1,13 @@
 import requests
 from singer import metrics
 from .timeout import timeout
-from .schemas import EXPORT_API_PATH_NAMES
+from .schemas import (
+    EXPORT_API_PATH_NAMES, V3_API_PATH_NAMES, V3_API_ENDPOINT_NAMES
+)
 import backoff
 
 
-FULL_URI = "https://{dc}.api.mailchimp.com/3.0/{stream}"
-LIST_MEMBERS = FULL_URI + "/{list_id}/members"
+FULL_URI = "https://{dc}.api.mailchimp.com/3.0/{v3_endpoint}"
 
 EXPORT_URI = "https://{dc}.api.mailchimp.com/export/1.0/"  # noqa
 
@@ -53,16 +54,22 @@ class Client(object):
         path = EXPORT_API_PATH_NAMES[stream]
         return _join(EXPORT_URI, path).format(dc=self.dc)
 
-    def url_v3(self, stream):
-        return FULL_URI.format(dc=self.dc, stream=stream)
+    def v3_url(self, stream):
+        return FULL_URI.format(
+            dc=self.dc, v3_endpoint=V3_API_ENDPOINT_NAMES[stream])
 
-    def create_get_request(self, path, params):
-        return requests.Request(method="GET", url=self.url(path),
-                                params=params)
+    def v3_endpoint(self, stream, item_id):
+        return '{id}/{path}'.format(
+            id=item_id,
+            path=V3_API_PATH_NAMES[stream]
+        )
 
-    def create_get_request_v3(self, stream, params):
-        return requests.Request(method="GET", url=self.url_v3(stream),
-                                params=params)
+    def create_get_request(self, stream, params, item_id=None):
+        if item_id:
+            url = _join(self.v3_url(stream), self.v3_endpoint(stream, item_id))
+        else:
+            url = self.v3_url(stream)
+        return requests.Request(method="GET", url=url, params=params)
 
     @backoff.on_exception(backoff.expo,
                           RateLimitException,
@@ -77,15 +84,11 @@ class Client(object):
         response.raise_for_status()
         return response
 
-    def GET(self, path, params, *args, **kwargs):
-        req = self.create_get_request(path, params)
-        return self.request_with_handling(req, *args, **kwargs)
-
-    def GET_v3(self, stream, params={}):
-        req = self.create_get_request_v3(stream, params)
+    def GET(self, stream, params, item_id=None):
+        req = self.create_get_request(stream, params, item_id)
         return self.request_with_handling(req, stream)
 
-    def post(self, stream, entity, last_updated):
+    def export_post(self, stream, entity, last_updated):
         return requests.post(self.export_url(stream),
                             params=self.ctx.get_params(entity['id'],
                                                        last_updated)

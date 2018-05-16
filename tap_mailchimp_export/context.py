@@ -48,9 +48,9 @@ class Context(object):
     def get_params(self, id, last_updated):
         return {
             'id': id,
-            # 'since': convert_to_mc_date(
-            #     last_updated.get(id, self.get_start_date())
-            # ),
+            'since': convert_to_mc_date(
+                last_updated.get(id, self.get_start_date())
+            ),
             'apikey': self.config['apikey'],
             'include_empty': True
         }

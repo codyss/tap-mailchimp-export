@@ -25,6 +25,17 @@ EXPORT_API_PATH_NAMES = {
     IDS.LIST_MEMBERS: "list"
 }
 
+V3_API_PATH_NAMES = {
+    IDS.LIST_MEMBERS: "members"
+}
+
+V3_API_ENDPOINT_NAMES = {
+    IDS.CAMPAIGNS: "campaigns",
+    IDS.LISTS: "lists",
+    IDS.LIST_MEMBERS: "lists"
+}
+
+
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)

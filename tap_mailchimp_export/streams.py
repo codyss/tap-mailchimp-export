@@ -1,5 +1,5 @@
 import singer
-from .schemas import IDS
+from .schemas import IDS, V3_API_PATH_NAMES
 from .context import convert_to_mc_date
 import time
 import pendulum
@@ -16,7 +16,7 @@ import backoff
 
 logger = singer.get_logger()
 
-BATCH_SIZE = 1000
+BATCH_SIZE = 500
 PAGE_SIZE = 1000
 LOOKBACK_DAYS = 7
 
@@ -38,7 +38,7 @@ class BOOK(object):
     CAMPAIGNS = [IDS.CAMPAIGNS]
     CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY, "timestamp"]
     LISTS = [IDS.LISTS]
-    LIST_MEMBERS = [IDS.LIST_MEMBERS, "LAST_CHANGED"]
+    LIST_MEMBERS = [IDS.LIST_MEMBERS, "last_changed"]
 
     @classmethod
     def return_bookmark_path(cls, stream):
@@ -142,7 +142,7 @@ def handle_campaign_subscriber_activity_response(response, stream, c, last_updat
         if r:
             batched_records = batched_records + transform_event(r, c)
 
-            if len(batched_records) > 500:
+            if len(batched_records) > BATCH_SIZE:
                 write_records_and_update_state(
                     c, stream, batched_records, last_updated)
 
@@ -158,7 +158,7 @@ def handle_list_members_response(response, stream, l, last_updated):
                 batched_records = batched_records + [dict(
                     zip(header, json.loads(r.decode('utf-8'))))]
 
-                if len(batched_records) > 500:
+                if len(batched_records) > BATCH_SIZE:
                     write_records_and_update_state(
                         l, stream, batched_records, last_updated)
 
@@ -167,40 +167,73 @@ def handle_list_members_response(response, stream, l, last_updated):
                 header = json.loads(r.decode('utf-8'))
     return batched_records
 
-def run_export_request(ctx, e, stream, last_updated, retries=0):
+def run_export_request(ctx, entity, stream, last_updated, retries=0):
     batched_records = []
 
     if retries < 3:
         try:
-            with ctx.client.post(
-                    stream, e, last_updated
+            with ctx.client.export_post(
+                    stream, entity, last_updated
             ) as res:
                 if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
                     batched_records = \
                         handle_campaign_subscriber_activity_response(
-                            res, stream, e, last_updated
+                            res, stream, entity, last_updated
                         )
                 elif stream == IDS.LIST_MEMBERS:
                     batched_records = handle_list_members_response(
-                        res, stream, e, last_updated
+                        res, stream, entity, last_updated
                     )
 
                 if batched_records:
                     write_records_and_update_state(
-                        e, stream, batched_records, last_updated)
+                        entity, stream, batched_records, last_updated)
 
         except Exception as e:
             logger.info(e)
             logger.info('Waiting 30 seconds - then retrying')
             time.sleep(30)
             retries += 1
-            run_export_request(ctx, l, stream, last_updated, retries)
+            run_export_request(ctx, entity, stream, last_updated, retries)
 
     else:
         logger.info('Too many fails for %s, continuing to others' % l['id'])
 
-def run_v3_request(ctx, e, stream, last_updated, retries=0):
-    pass
+def run_v3_request(ctx, entity, stream, last_updated, retries=0):
+    batched_records = []
+    offset = 0
+    record_key = V3_API_PATH_NAMES[stream]
+    if retries < 3:
+        try:
+            while True:
+                params = {
+                    'offset': offset,
+                    'count': PAGE_SIZE
+                }
+                response = ctx.client.GET(stream, params, item_id=entity['id'])
+                content = json.loads(response.content)
+                if len(content[record_key]) == 0:
+                    break
+                offset += len(content[record_key])
+                batched_records += content[record_key]
+                if len(batched_records) > BATCH_SIZE:
+                    write_records_and_update_state(
+                        entity, stream, batched_records, last_updated)
+
+                    batched_records = []
+
+            if len(batched_records) > BATCH_SIZE:
+                write_records_and_update_state(
+                        entity, stream, batched_records, last_updated)
+
+        except Exception as e:
+            logger.info(e)
+            logger.info('Waiting 30 seconds - then retrying')
+            time.sleep(30)
+            retries += 1
+            run_v3_request(ctx, entity, stream, last_updated, retries)
+    else:
+        logger.info('Too many fails for %s, continuing to others' % l['id'])
 
 def call_stream_incremental(ctx, stream):
     last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(stream)) or \
@@ -218,7 +251,7 @@ def call_stream_incremental(ctx, stream):
 
         handlers = {
             'campaign': run_export_request,
-            'list': run_export_request
+            'list': run_v3_request
         }
         handlers[stream_resource](ctx, e, stream, last_updated)
 
@@ -228,24 +261,15 @@ def call_stream_incremental(ctx, stream):
 
     return last_updated
 
-def get_since_date():
-    date_obj = datetime.now()
-    new_date = date_obj - timedelta(days=LOOKBACK_DAYS)
-    return new_date.strftime("%Y-%m-%d")
-
 def call_stream_full(ctx, stream):
     records = []
     offset = 0
-    since_date = ctx.get_start_date() or self.get_since_date()
     while True:
         params = {'offset': offset}
         if stream == IDS.CAMPAIGNS:
-            params['since_send_time'] = since_date
             params['status'] = 'sent'
-        elif stream == IDS.LISTS:
-            params['since_send_time'] = since_date
 
-        response = ctx.client.GET_v3(stream, params=params)
+        response = ctx.client.GET(stream, params)
         content = json.loads(response.content)
         records += content[stream]
         item_count = content['total_items']
