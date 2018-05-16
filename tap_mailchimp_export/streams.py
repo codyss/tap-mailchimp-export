@@ -1,5 +1,5 @@
 import singer
-from .schemas import IDS, V3_API_PATH_NAMES
+from .schemas import IDS, V3_API_PATH_NAMES, V3_SINCE_KEY
 from .context import convert_to_mc_date
 import time
 import pendulum
@@ -99,6 +99,16 @@ def transform_event(record, campaign):
 
     new_events = []
 
+    if len(events) == 0:
+        new_events.append({
+            'email': email,
+            'action': send,
+            'timestamp': campaign['send_time'],
+            'campaign_id': campaign['id'],
+            'campaign_title': campaign['title'],
+            'list_id': campaign['list_id']
+        })
+
     for event in events:
         new_events.append({
             'email': email,
@@ -197,7 +207,7 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
             run_export_request(ctx, entity, stream, last_updated, retries)
 
     else:
-        logger.info('Too many fails for %s, continuing to others' % l['id'])
+        logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
 def run_v3_request(ctx, entity, stream, last_updated, retries=0):
     batched_records = []
@@ -208,8 +218,10 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0):
             while True:
                 params = {
                     'offset': offset,
-                    'count': PAGE_SIZE
+                    'count': PAGE_SIZE,
+                    V3_SINCE_KEY[stream]: last_updated[entity['id']]
                 }
+
                 response = ctx.client.GET(stream, params, item_id=entity['id'])
                 content = json.loads(response.content)
                 if len(content[record_key]) == 0:
@@ -233,13 +245,14 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0):
             retries += 1
             run_v3_request(ctx, entity, stream, last_updated, retries)
     else:
-        logger.info('Too many fails for %s, continuing to others' % l['id'])
+        logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
 def call_stream_incremental(ctx, stream):
     last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(stream)) or \
                    defaultdict(str)
 
     stream_resource = stream.split('_')[0]
+
     for e in getattr(ctx, stream_resource + 's'):
         ctx.update_latest(e['id'], last_updated)
 

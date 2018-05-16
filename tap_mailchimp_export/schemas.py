@@ -35,6 +35,10 @@ V3_API_ENDPOINT_NAMES = {
     IDS.LIST_MEMBERS: "lists"
 }
 
+V3_SINCE_KEY = {
+    IDS.LIST_MEMBERS: "since_last_changed"
+}
+
 
 
 def get_abs_path(path):
