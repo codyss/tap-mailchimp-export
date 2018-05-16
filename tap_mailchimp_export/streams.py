@@ -102,8 +102,8 @@ def transform_event(record, campaign):
     if len(events) == 0:
         new_events.append({
             'email': email,
-            'action': send,
-            'timestamp': campaign['send_time'],
+            'action': 'send',
+            'timestamp': campaign['sent_at'],
             'campaign_id': campaign['id'],
             'campaign_title': campaign['title'],
             'list_id': campaign['list_id']
