@@ -18,7 +18,7 @@ logger = singer.get_logger()
 
 BATCH_SIZE = 500
 PAGE_SIZE = 1000
-LOOKBACK_DAYS = 60
+LOOKBACK_DAYS = 365
 
 class RemoteDisconnected(Exception):
     pass
