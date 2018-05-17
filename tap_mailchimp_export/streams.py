@@ -18,7 +18,6 @@ logger = singer.get_logger()
 
 BATCH_SIZE = 500
 PAGE_SIZE = 1000
-LOOKBACK_DAYS = 365
 
 class RemoteDisconnected(Exception):
     pass
@@ -275,7 +274,7 @@ def call_stream_incremental(ctx, stream):
     return last_updated
 
 def earlier_date(ctx):
-    new_date = ctx.now - timedelta(days=LOOKBACK_DAYS)
+    new_date = ctx.now - timedelta(days=ctx.lookback_days)
     return new_date.strftime("%Y-%m-%d")
 
 def call_stream_full(ctx, stream):

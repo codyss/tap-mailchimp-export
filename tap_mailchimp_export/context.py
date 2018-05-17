@@ -5,6 +5,7 @@ from singer import bookmarks as bks_
 from mailsnake import MailSnake
 from .http import Client
 
+LOOKBACK_DAYS = 60
 
 def convert_to_mc_date(iso_string):
     return pendulum.parse(iso_string).to_datetime_string()
@@ -32,6 +33,7 @@ class Context(object):
         self.lists = []
         self.selected_stream_ids = None
         self.now = datetime.utcnow()
+        self.lookback_days = config.get('maximum_backfill_days', LOOKBACK_DAYS)
 
     @property
     def catalog(self):
