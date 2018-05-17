@@ -18,7 +18,7 @@ logger = singer.get_logger()
 
 BATCH_SIZE = 500
 PAGE_SIZE = 1000
-LOOKBACK_DAYS = 7
+LOOKBACK_DAYS = 60
 
 class RemoteDisconnected(Exception):
     pass
@@ -274,6 +274,10 @@ def call_stream_incremental(ctx, stream):
 
     return last_updated
 
+def earlier_date(ctx):
+    new_date = ctx.now - timedelta(days=LOOKBACK_DAYS)
+    return new_date.strftime("%Y-%m-%d")
+
 def call_stream_full(ctx, stream):
     records = []
     offset = 0
@@ -281,6 +285,7 @@ def call_stream_full(ctx, stream):
         params = {'offset': offset}
         if stream == IDS.CAMPAIGNS:
             params['status'] = 'sent'
+            params['since_send_time'] = earlier_date(ctx)
 
         response = ctx.client.GET(stream, params)
         content = json.loads(response.content)
