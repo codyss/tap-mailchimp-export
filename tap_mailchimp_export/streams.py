@@ -75,6 +75,13 @@ def sync(ctx):
             bk = call_stream_incremental(ctx, stream)
             save_state(ctx, stream, bk)
 
+def transform_send_time(sent_at):
+    """
+    Convert a sent at campaign time to the same timestamp format as the
+    timestamps returned by clicks/opens.
+    2018-04-12T13:30:00+00:00  -->  2018-04-12 20:52:45
+    """
+    return sent_at.replace('T', ' ')[:-6]
 
 def transform_event(record, campaign):
     """
@@ -102,7 +109,7 @@ def transform_event(record, campaign):
         new_events.append({
             'email': email,
             'action': 'send',
-            'timestamp': campaign['sent_at'],
+            'timestamp': transform_send_time(campaign['sent_at']),
             'campaign_id': campaign['id'],
             'campaign_title': campaign['title'],
             'list_id': campaign['list_id']
