@@ -105,15 +105,14 @@ def transform_event(record, campaign):
 
     new_events = []
 
-    if len(events) == 0:
-        new_events.append({
-            'email': email,
-            'action': 'send',
-            'timestamp': transform_send_time(campaign['sent_at']),
-            'campaign_id': campaign['id'],
-            'campaign_title': campaign['title'],
-            'list_id': campaign['list_id']
-        })
+    new_events.append({
+        'email': email,
+        'action': 'send',
+        'timestamp': transform_send_time(campaign['sent_at']),
+        'campaign_id': campaign['id'],
+        'campaign_title': campaign['title'],
+        'list_id': campaign['list_id']
+    })
 
     for event in events:
         new_events.append({
@@ -260,6 +259,8 @@ def call_stream_incremental(ctx, stream):
     stream_resource = stream.split('_')[0]
 
     for e in getattr(ctx, stream_resource + 's'):
+        if e['id'] == '0024c2952d':
+            continue
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream} id: {id}, since: {since}'.format(
