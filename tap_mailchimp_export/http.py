@@ -91,5 +91,6 @@ class Client(object):
     def export_post(self, stream, entity, last_updated):
         return requests.post(self.export_url(stream),
                             params=self.ctx.get_params(entity['id'],
-                                                       last_updated)
+                                                       last_updated),
+                            timeout=15 * 60
                             )
