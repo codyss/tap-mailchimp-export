@@ -17,7 +17,7 @@ import backoff
 logger = singer.get_logger()
 
 BATCH_SIZE = 500
-PAGE_SIZE = 1000
+PAGE_SIZE = 500
 
 class RemoteDisconnected(Exception):
     pass
@@ -218,13 +218,14 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0):
     batched_records = []
     offset = 0
     record_key = V3_API_PATH_NAMES[stream]
+    date_to_check = last_updated[entity['id']]
     if retries < 3:
         try:
             while True:
                 params = {
                     'offset': offset,
                     'count': PAGE_SIZE,
-                    V3_SINCE_KEY[stream]: last_updated[entity['id']]
+                    V3_SINCE_KEY[stream]: date_to_check
                 }
 
                 response = ctx.client.GET(stream, params, item_id=entity['id'])
