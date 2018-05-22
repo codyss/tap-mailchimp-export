@@ -240,7 +240,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0):
 
                     batched_records = []
 
-            if len(batched_records) > BATCH_SIZE:
+            if batched_records:
                 write_records_and_update_state(
                         entity, stream, batched_records, last_updated)
 
@@ -260,8 +260,6 @@ def call_stream_incremental(ctx, stream):
     stream_resource = stream.split('_')[0]
 
     for e in getattr(ctx, stream_resource + 's'):
-        if e['id'] == '0024c2952d':
-            continue
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream} id: {id}, since: {since}'.format(
