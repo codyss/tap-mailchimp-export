@@ -219,7 +219,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0):
     offset = 0
     record_key = V3_API_PATH_NAMES[stream]
     date_to_check = last_updated[entity['id']]
-    if retries < 3:
+    if retries < 20:
         try:
             while True:
                 params = {
