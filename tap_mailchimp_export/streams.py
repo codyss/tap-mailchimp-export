@@ -225,7 +225,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0):
                 params = {
                     'offset': offset,
                     'count': PAGE_SIZE,
-                    V3_SINCE_KEY[stream]: date_to_check
+                    # V3_SINCE_KEY[stream]: date_to_check
                 }
 
                 response = ctx.client.GET(stream, params, item_id=entity['id'])
