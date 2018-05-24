@@ -214,9 +214,8 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
     else:
         logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
-def run_v3_request(ctx, entity, stream, last_updated, retries=0):
+def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
     batched_records = []
-    offset = 0
     record_key = V3_API_PATH_NAMES[stream]
     date_to_check = last_updated[entity['id']]
     if retries < 20:
@@ -249,7 +248,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0):
             logger.info('Waiting 30 seconds - then retrying')
             time.sleep(30)
             retries += 1
-            run_v3_request(ctx, entity, stream, last_updated, retries)
+            run_v3_request(ctx, entity, stream, last_updated, retries, offset)
     else:
         logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
