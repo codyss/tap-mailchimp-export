@@ -46,9 +46,8 @@ def main():
         discover(ctx).dump()
         print()
     else:
-        # ctx.catalog = Catalog.from_dict(args.properties) \
-        #     if args.properties else discover(ctx)
-        ctx.catalog = args.catalog
+        ctx.catalog = Catalog.from_dict(args.properties) \
+            if args.properties else discover(ctx)
         sync(ctx)
 
 if __name__ == "__main__":
