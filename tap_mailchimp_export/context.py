@@ -1,11 +1,10 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import pendulum
 import singer
 from singer import bookmarks as bks_
 from mailsnake import MailSnake
 from .http import Client
-
-LOOKBACK_DAYS = 60
+from .schemas import IDS
 
 def convert_to_mc_date(iso_string):
     return pendulum.parse(iso_string).to_datetime_string()
@@ -33,7 +32,7 @@ class Context(object):
         self.lists = []
         self.selected_stream_ids = None
         self.now = datetime.utcnow()
-        self.lookback_days = config.get('maximum_backfill_days', LOOKBACK_DAYS)
+        self.lookback_days = config.get('lookback_days')
 
     @property
     def catalog(self):
@@ -46,16 +45,6 @@ class Context(object):
             [s.tap_stream_id for s in catalog.streams
              if s.is_selected()]
         )
-
-    def get_params(self, id, last_updated):
-        return {
-            'id': id,
-            'since': convert_to_mc_date(
-                last_updated.get(id, self.get_start_date())
-            ),
-            'apikey': self.config['apikey'],
-            'include_empty': True
-        }
 
     def get_bookmark(self, path):
         return bks_.get_bookmark(self.state, *path)
@@ -88,30 +77,44 @@ class Context(object):
     def update_start_date_bookmark(self, path):
         val = self.get_bookmark(path)
         if not val:
-            val = self.config["start_date"]
+            val = self.get_start_date()
             self.set_bookmark(path, val)
         return pendulum.parse(val)
 
     def get_start_date(self):
-        return self.config["start_date"]
+        if self.lookback_days:
+            new_date = self.now - timedelta(days=self.lookback_days)
+            return convert_to_mc_date(new_date.strftime("%Y-%m-%d"))
 
     def write_state(self):
         singer.write_state(self.state)
 
     def save_campaigns_meta(self, campaigns):
-        self.campaigns = [
+        setattr(self, IDS.CAMPAIGNS, [
             {
                 'id': c['id'],
                 'title': c['settings']['title'],
                 'list_id': c['recipients']['list_id'],
                 'sent_at': c['send_time'],
+                'automation': False
             } for c in campaigns
-        ]
+        ])
 
     def save_lists_meta(self, lists):
-        self.lists = [
+        setattr(self, IDS.LISTS, [
             {
                 'id': l['id'],
                 'name': l['name'],
             } for l in lists
-        ]
+        ])
+
+    def save_automation_workflows_meta(self, workflows):
+        setattr(self, IDS.AUTOMATION_WORKFLOWS, [
+            {
+                'id': w['id'],
+                'title': w['settings']['title'],
+                'list_id': w['recipients']['list_id'],
+                'start_time': w['start_time'],
+                'automation': True
+            } for w in workflows
+        ])

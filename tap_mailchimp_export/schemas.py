@@ -9,6 +9,8 @@ class IDS(object):
     CAMPAIGN_SUBSCRIBER_ACTIVITY = "campaign_subscriber_activity"
     LISTS = "lists"
     LIST_MEMBERS = "list_members"
+    AUTOMATION_WORKFLOWS = "automation_workflows"
+    AUTOMATION_WORKFLOW_EMAILS = "automation_workflow_emails"
 
 stream_ids = [getattr(IDS, x) for x in dir(IDS)
               if not x.startswith("__")]
@@ -18,27 +20,41 @@ PK_FIELDS = {
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: ["uuid"],
     IDS.LISTS: ["id"],
     IDS.LIST_MEMBERS: ["email"],
-}
-
-EXPORT_API_PATH_NAMES = {
-    IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "campaignSubscriberActivity",
-    IDS.LIST_MEMBERS: "list"
-}
-
-V3_API_PATH_NAMES = {
-    IDS.LIST_MEMBERS: "members"
+    IDS.AUTOMATION_WORKFLOWS: ["id"],
 }
 
 V3_API_ENDPOINT_NAMES = {
     IDS.CAMPAIGNS: "campaigns",
     IDS.LISTS: "lists",
-    IDS.LIST_MEMBERS: "lists"
+    IDS.LIST_MEMBERS: "lists",
+    IDS.AUTOMATION_WORKFLOWS: "automations"
+}
+
+EXPORT_API_PATH_NAMES = {
+    IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "campaignSubscriberActivity",
+    IDS.LIST_MEMBERS: "list",
+    IDS.AUTOMATION_WORKFLOWS: "campaignSubscriberActivity"
+}
+
+SUB_PATH_KEY = {
+    IDS.LIST_MEMBERS: "members",
+    IDS.AUTOMATION_WORKFLOWS: "emails"
 }
 
 V3_SINCE_KEY = {
-    IDS.LIST_MEMBERS: "since_last_changed"
+    IDS.CAMPAIGNS: "since_send_time",
+    IDS.LIST_MEMBERS: "since_last_changed",
+    IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "since",
+    IDS.AUTOMATION_WORKFLOWS: "start_time",
+    IDS.LISTS: "since_date_created"
 }
 
+INCREMENTAL_STREAMS = {
+    IDS.LIST_MEMBERS: [IDS.LISTS],
+    IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: [
+        IDS.AUTOMATION_WORKFLOWS, IDS.CAMPAIGNS
+    ],
+}
 
 
 def get_abs_path(path):

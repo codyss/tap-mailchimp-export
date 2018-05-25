@@ -1,5 +1,8 @@
 import singer
-from .schemas import IDS, V3_API_PATH_NAMES, V3_SINCE_KEY
+from .schemas import (
+    IDS, SUB_PATH_KEY, V3_SINCE_KEY, V3_API_ENDPOINT_NAMES,
+    INCREMENTAL_STREAMS
+)
 from .context import convert_to_mc_date
 import time
 import pendulum
@@ -38,6 +41,7 @@ class BOOK(object):
     CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY, "timestamp"]
     LISTS = [IDS.LISTS]
     LIST_MEMBERS = [IDS.LIST_MEMBERS, "last_changed"]
+    AUTOMATION_WORKFLOWS = [IDS.AUTOMATION_WORKFLOWS]
 
     @classmethod
     def return_bookmark_path(cls, stream):
@@ -93,7 +97,7 @@ def transform_event(record, campaign):
     :yield: enriched events to support downstream analytics
     """
 
-    # record = record.decode('utf-8')
+    record = record.decode('utf-8')
     obj = json.loads(record)
     if 'error' in obj.keys():
         raise Exception(record)
@@ -105,14 +109,15 @@ def transform_event(record, campaign):
 
     new_events = []
 
-    new_events.append({
-        'email': email,
-        'action': 'send',
-        'timestamp': transform_send_time(campaign['sent_at']),
-        'campaign_id': campaign['id'],
-        'campaign_title': campaign['title'],
-        'list_id': campaign['list_id']
-    })
+    if not campaign['automation']:
+        new_events.append({
+            'email': email,
+            'action': 'send',
+            'timestamp': transform_send_time(campaign['sent_at']),
+            'campaign_id': campaign['id'],
+            'campaign_title': campaign['title'],
+            'list_id': campaign['list_id']
+        })
 
     for event in events:
         new_events.append({
@@ -184,11 +189,19 @@ def handle_list_members_response(response, stream, l, last_updated):
 
 def run_export_request(ctx, entity, stream, last_updated, retries=0):
     batched_records = []
-
+    start_date = ctx.get_start_date()
+    params = {
+        'id': entity['id'],
+    }
+    if not entity['automation']:
+        params['include_empty'] = True
+    if start_date:
+        params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
+    import ipdb; ipdb.set_trace()
     if retries < 3:
         try:
             with ctx.client.export_post(
-                    stream, entity, last_updated
+                    stream, entity, last_updated, params
             ) as res:
                 if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
                     batched_records = \
@@ -216,16 +229,18 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
 
 def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
     batched_records = []
-    record_key = V3_API_PATH_NAMES[stream]
-    date_to_check = last_updated[entity['id']]
+    record_key = SUB_PATH_KEY[stream]
+    start_date = ctx.get_start_date()
+
     if retries < 20:
         try:
             while True:
                 params = {
                     'offset': offset,
-                    'count': PAGE_SIZE,
-                    # V3_SINCE_KEY[stream]: date_to_check
+                    'count': PAGE_SIZE
                 }
+                if start_date:
+                    params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
 
                 response = ctx.client.GET(stream, params, item_id=entity['id'])
                 content = json.loads(response.content)
@@ -256,52 +271,61 @@ def call_stream_incremental(ctx, stream):
     last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(stream)) or \
                    defaultdict(str)
 
-    stream_resource = stream.split('_')[0]
+    for entity_stream in INCREMENTAL_STREAMS[stream]:
+        for e in getattr(ctx, entity_stream):
+            ctx.update_latest(e['id'], last_updated)
 
-    for e in getattr(ctx, stream_resource + 's'):
-        ctx.update_latest(e['id'], last_updated)
+            logger.info('querying {stream} id: {id}, since: {since}'.format(
+                stream=entity_stream[:-1],
+                id=e['id'],
+                since=last_updated[e['id']],
+            ))
 
-        logger.info('querying {stream} id: {id}, since: {since}'.format(
-            stream=stream_resource,
-            id=e['id'],
-            since=last_updated[e['id']],
-        ))
+            handlers = {
+                IDS.CAMPAIGNS: run_export_request,
+                IDS.LISTS: run_v3_request,
+                IDS.AUTOMATION_WORKFLOWS: run_export_request
+            }
+            handlers[entity_stream](ctx, e, stream, last_updated)
 
-        handlers = {
-            'campaign': run_export_request,
-            'list': run_v3_request
-        }
-        handlers[stream_resource](ctx, e, stream, last_updated)
-
-        ctx.set_bookmark_and_write_state(
-            BOOK.return_bookmark_path(stream),
-            last_updated)
+            ctx.set_bookmark_and_write_state(
+                BOOK.return_bookmark_path(stream),
+                last_updated)
 
     return last_updated
 
-def earlier_date(ctx):
-    new_date = ctx.now - timedelta(days=ctx.lookback_days)
-    return new_date.strftime("%Y-%m-%d")
-
-def call_stream_full(ctx, stream):
-    records = []
+def call_stream_full(ctx, stream, item_id=None):
+    total_records = []
     offset = 0
     while True:
         params = {'offset': offset}
-        if stream == IDS.CAMPAIGNS:
+        if stream in (IDS.CAMPAIGNS,):
             params['status'] = 'sent'
-            params['since_send_time'] = earlier_date(ctx)
+            params[V3_SINCE_KEY[stream]] = ctx.get_start_date()
 
-        response = ctx.client.GET(stream, params)
+        response = ctx.client.GET(stream, params, item_id)
         content = json.loads(response.content)
-        records += content[stream]
-        item_count = content['total_items']
-        if len(content[stream]) == 0:
-            break
-        offset += len(content[stream])
-    write_records(stream, records)
 
-    getattr(ctx, 'save_%s_meta' % stream)(records)
+        if item_id:
+            records = content[V3_API_ENDPOINT_NAMES][SUB_PATH_KEY[stream]]
+        else:
+            records = content[V3_API_ENDPOINT_NAMES[stream]]
+        total_records += records
+        item_count = content['total_items']
+        if len(records) == 0:
+            break
+        offset += len(records)
+    if stream not in INCREMENTAL_STREAMS and stream in SUB_PATH_KEY and \
+                                               not item_id:
+        for record in total_records:
+            call_stream_full(ctx, stream, record['id'])
+
+    if item_id:
+        write_records(stream, total_records)
+        getattr(ctx, 'save_%s_meta' % stream)(total_records)
+    else:
+        write_records(SUB_PATH_KEY[stream], total_records)
+        getattr(ctx, 'save_%s_meta' % SUB_PATH_KEY[stream])(total_records)
 
 def save_state(ctx, stream, bk):
     ctx.set_bookmark(BOOK.return_bookmark_path(stream), bk)

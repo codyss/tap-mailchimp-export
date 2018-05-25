@@ -2,7 +2,7 @@ import requests
 from singer import metrics
 from .timeout import timeout
 from .schemas import (
-    EXPORT_API_PATH_NAMES, V3_API_PATH_NAMES, V3_API_ENDPOINT_NAMES
+    EXPORT_API_PATH_NAMES, SUB_PATH_KEY, V3_API_ENDPOINT_NAMES
 )
 import backoff
 
@@ -61,7 +61,7 @@ class Client(object):
     def v3_endpoint(self, stream, item_id):
         return '{id}/{path}'.format(
             id=item_id,
-            path=V3_API_PATH_NAMES[stream]
+            path=SUB_PATH_KEY[stream]
         )
 
     def create_get_request(self, stream, params, item_id=None):
@@ -70,6 +70,10 @@ class Client(object):
         else:
             url = self.v3_url(stream)
         return requests.Request(method="GET", url=url, params=params)
+
+    def create_post_params(self, params):
+        params['apikey'] = self.apikey
+        return params
 
     @backoff.on_exception(backoff.expo,
                           RateLimitException,
@@ -88,9 +92,8 @@ class Client(object):
         req = self.create_get_request(stream, params, item_id)
         return self.request_with_handling(req, stream)
 
-    def export_post(self, stream, entity, last_updated):
+    def export_post(self, stream, entity, last_updated, params):
         return requests.post(self.export_url(stream),
-                            params=self.ctx.get_params(entity['id'],
-                                                       last_updated),
+                            params=self.create_post_params(params),
                             timeout=15 * 60
                             )
