@@ -88,9 +88,9 @@ class Client(object):
         req = self.create_get_request(stream, params, item_id)
         return self.request_with_handling(req, stream)
 
-    def export_post(self, stream, entity, last_updated):
+    def export_post(self, stream, entity, last_updated, params):
+        params.update(self.headers)
         return requests.post(self.export_url(stream),
-                            params=self.ctx.get_params(entity['id'],
-                                                       last_updated),
+                            params=params,
                             timeout=15 * 60
                             )

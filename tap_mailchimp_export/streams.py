@@ -10,7 +10,6 @@ from collections import defaultdict
 from time import sleep
 from dateutil import parser
 from dateutil.tz import tzutc
-from datetime import datetime, timedelta
 
 import backoff
 
@@ -93,7 +92,7 @@ def transform_event(record, campaign):
     :yield: enriched events to support downstream analytics
     """
 
-    # record = record.decode('utf-8')
+    record = record.decode('utf-8')
     obj = json.loads(record)
     if 'error' in obj.keys():
         raise Exception(record)
@@ -184,11 +183,17 @@ def handle_list_members_response(response, stream, l, last_updated):
 
 def run_export_request(ctx, entity, stream, last_updated, retries=0):
     batched_records = []
-
+    start_date = ctx.get_start_date()
+    params = {
+        'id': entity['id'],
+        'include_empty': True
+    }
+    if start_date:
+        params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
     if retries < 3:
         try:
             with ctx.client.export_post(
-                    stream, entity, last_updated
+                    stream, entity, last_updated, params
             ) as res:
                 if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
                     batched_records = \
@@ -217,15 +222,17 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
 def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
     batched_records = []
     record_key = V3_API_PATH_NAMES[stream]
-    date_to_check = last_updated[entity['id']]
+    start_date = ctx.get_start_date()
+
     if retries < 20:
         try:
             while True:
                 params = {
                     'offset': offset,
                     'count': PAGE_SIZE,
-                    # V3_SINCE_KEY[stream]: date_to_check
                 }
+                if start_date:
+                    params[V3_SINCE_KEY[stream]]: last_updated(id, start_date)
 
                 response = ctx.client.GET(stream, params, item_id=entity['id'])
                 content = json.loads(response.content)
@@ -279,10 +286,6 @@ def call_stream_incremental(ctx, stream):
 
     return last_updated
 
-def earlier_date(ctx):
-    new_date = ctx.now - timedelta(days=ctx.lookback_days)
-    return new_date.strftime("%Y-%m-%d")
-
 def call_stream_full(ctx, stream):
     records = []
     offset = 0
@@ -290,7 +293,7 @@ def call_stream_full(ctx, stream):
         params = {'offset': offset}
         if stream == IDS.CAMPAIGNS:
             params['status'] = 'sent'
-            params['since_send_time'] = earlier_date(ctx)
+            params[V3_SINCE_KEY[stream]] = ctx.get_start_date()
 
         response = ctx.client.GET(stream, params)
         content = json.loads(response.content)

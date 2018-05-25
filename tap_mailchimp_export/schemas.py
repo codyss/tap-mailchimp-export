@@ -36,7 +36,10 @@ V3_API_ENDPOINT_NAMES = {
 }
 
 V3_SINCE_KEY = {
-    IDS.LIST_MEMBERS: "since_last_changed"
+    IDS.CAMPAIGNS: "since_send_time",
+    IDS.LIST_MEMBERS: "since_last_changed",
+    IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "since",
+    IDS.LISTS: "since_date_created"
 }
 
 
