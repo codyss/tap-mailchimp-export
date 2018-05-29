@@ -232,7 +232,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
                     'count': PAGE_SIZE,
                 }
                 if start_date:
-                    params[V3_SINCE_KEY[stream]]: last_updated(id, start_date)
+                    params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
 
                 response = ctx.client.GET(stream, params, item_id=entity['id'])
                 content = json.loads(response.content)
