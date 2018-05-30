@@ -4,6 +4,7 @@ import singer
 from singer import bookmarks as bks_
 from mailsnake import MailSnake
 from .http import Client
+from .schemas import IDS
 
 def convert_to_mc_date(iso_string):
     return pendulum.parse(iso_string).to_datetime_string()
@@ -89,19 +90,40 @@ class Context(object):
         singer.write_state(self.state)
 
     def save_campaigns_meta(self, campaigns):
-        self.campaigns = [
+        setattr(self, IDS.CAMPAIGNS, [
             {
                 'id': c['id'],
                 'title': c['settings']['title'],
                 'list_id': c['recipients']['list_id'],
                 'sent_at': c['send_time'],
             } for c in campaigns
-        ]
+        ])
 
     def save_lists_meta(self, lists):
-        self.lists = [
+        setattr(self, IDS.LISTS, [
             {
                 'id': l['id'],
                 'name': l['name'],
             } for l in lists
-        ]
+        ])
+
+    def save_automation_workflows_meta(self, workflows):
+        setattr(self, IDS.AUTOMATION_WORKFLOWS, [
+            {
+                'id': w['id'],
+                'title': w['settings']['title'],
+                'list_id': w['recipients']['list_id'],
+                'sent_at': w['start_time']
+            } for w in workflows
+        ])
+
+    def save_automation_workflow_emails_meta(self, emails):
+        setattr(self, IDS.AUTOMATION_WORKFLOW_EMAILS, [
+            {
+                'id': e['id'],
+                'title': e['settings']['title'],
+                'list_id': e['recipients']['list_id'],
+                'started_at': e['start_time'],
+                'automation': True
+            } for e in emails
+        ])
