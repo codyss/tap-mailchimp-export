@@ -1,5 +1,5 @@
 import singer
-from .schemas import IDS, V3_API_PATH_NAMES, V3_SINCE_KEY
+from .schemas import IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY
 from .context import convert_to_mc_date
 import time
 import pendulum
@@ -37,6 +37,7 @@ class BOOK(object):
     CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY, "timestamp"]
     LISTS = [IDS.LISTS]
     LIST_MEMBERS = [IDS.LIST_MEMBERS, "last_changed"]
+    CAMPAIGN_UNSUBSCRIBES = [IDS.CAMPAIGN_UNSUBSCRIBES, "timestamp"]
 
     @classmethod
     def return_bookmark_path(cls, stream):
@@ -165,6 +166,7 @@ def handle_campaign_subscriber_activity_response(response, stream, c, last_updat
                 batched_records = []
     return batched_records
 
+
 def handle_list_members_response(response, stream, l, last_updated):
     header = None
     batched_records = []
@@ -223,7 +225,7 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
 
 def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
     batched_records = []
-    record_key = V3_API_PATH_NAMES[stream]
+    record_key = V3_API_INDEX_NAMES[stream]
     start_date = ctx.get_start_date()
 
     if retries < 20:
@@ -233,7 +235,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
                     'offset': offset,
                     'count': PAGE_SIZE,
                 }
-                if start_date:
+                if start_date and V3_SINCE_KEY.get(stream):
                     params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
 
                 response = ctx.client.GET(stream, params, item_id=entity['id'])
@@ -277,10 +279,11 @@ def call_stream_incremental(ctx, stream):
         ))
 
         handlers = {
-            'campaign': run_export_request,
-            'list': run_v3_request
+            IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: run_export_request,
+            IDS.LIST_MEMBERS: run_v3_request,
+            IDS.CAMPAIGN_UNSUBSCRIBES: run_v3_request
         }
-        handlers[stream_resource](ctx, e, stream, last_updated)
+        handlers[stream](ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
             BOOK.return_bookmark_path(stream),
