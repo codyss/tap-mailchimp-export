@@ -7,6 +7,7 @@ from singer import utils
 class IDS(object):
     CAMPAIGNS = "campaigns"
     CAMPAIGN_SUBSCRIBER_ACTIVITY = "campaign_subscriber_activity"
+    CAMPAIGN_UNSUBSCRIBES = "campaign_unsubscribes"
     LISTS = "lists"
     LIST_MEMBERS = "list_members"
 
@@ -26,13 +27,20 @@ EXPORT_API_PATH_NAMES = {
 }
 
 V3_API_PATH_NAMES = {
-    IDS.LIST_MEMBERS: "members"
+    IDS.LIST_MEMBERS: "members",
+    IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribed"
+}
+
+V3_API_INDEX_NAMES = {
+    IDS.LIST_MEMBERS: "members",
+    IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribes"
 }
 
 V3_API_ENDPOINT_NAMES = {
     IDS.CAMPAIGNS: "campaigns",
     IDS.LISTS: "lists",
-    IDS.LIST_MEMBERS: "lists"
+    IDS.LIST_MEMBERS: "lists",
+    IDS.CAMPAIGN_UNSUBSCRIBES: "reports"
 }
 
 V3_SINCE_KEY = {
