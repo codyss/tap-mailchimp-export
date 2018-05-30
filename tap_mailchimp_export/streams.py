@@ -133,8 +133,10 @@ def transform_event(record, campaign):
 
 def get_latest_record_timestamp(records, last_updated, time_key):
     if records:
-        return max(max([r[time_key] for r in records]),
-                   last_updated)
+        record_max = max([r[time_key] for r in records])
+        if last_updated:
+            return max(record_max, last_updated)
+        return record_max
     else:
         return last_updated
 

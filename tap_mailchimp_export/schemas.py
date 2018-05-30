@@ -19,6 +19,7 @@ PK_FIELDS = {
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: ["uuid"],
     IDS.LISTS: ["id"],
     IDS.LIST_MEMBERS: ["email"],
+    IDS.CAMPAIGN_UNSUBSCRIBES: ["email"],
 }
 
 EXPORT_API_PATH_NAMES = {
