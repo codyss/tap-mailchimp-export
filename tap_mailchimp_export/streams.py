@@ -105,8 +105,6 @@ def transform_event(record, campaign):
 
     new_events = []
 
-    import ipdb; ipdb.set_trace()
-
     new_events.append({
         'email': email,
         'action': 'send',
