@@ -1,5 +1,7 @@
 import singer
-from .schemas import IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY
+from .schemas import (
+    IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY, INTERMEDIATE_STREAMS, SUB_STREAMS
+)
 from .context import convert_to_mc_date
 import time
 import pendulum
@@ -38,6 +40,9 @@ class BOOK(object):
     LISTS = [IDS.LISTS]
     LIST_MEMBERS = [IDS.LIST_MEMBERS, "last_changed"]
     CAMPAIGN_UNSUBSCRIBES = [IDS.CAMPAIGN_UNSUBSCRIBES, "timestamp"]
+    AUTOMATION_WORKFLOWS = [IDS.AUTOMATION_WORKFLOWS]
+    AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY = [IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY, "timestamp"]
+
 
     @classmethod
     def return_bookmark_path(cls, stream):
@@ -63,12 +68,18 @@ class BOOK(object):
 
         return syncs
 
-
 def sync(ctx):
     # do full syncs first as they are used later
     for stream in ctx.selected_stream_ids:
         if stream.upper() in BOOK.get_full_syncs():
             call_stream_full(ctx, stream)
+
+    for stream in ctx.selected_stream_ids:
+        if stream in INTERMEDIATE_STREAMS:
+            for entity in getattr(ctx, stream):
+                call_stream_full(
+                    ctx, INTERMEDIATE_STREAMS[stream], entity['id']
+                )
 
     for stream in ctx.selected_stream_ids:
         if stream.upper() in BOOK.get_incremental_syncs():
@@ -105,14 +116,15 @@ def transform_event(record, campaign):
 
     new_events = []
 
-    new_events.append({
-        'email': email,
-        'action': 'send',
-        'timestamp': transform_send_time(campaign['sent_at']),
-        'campaign_id': campaign['id'],
-        'campaign_title': campaign['title'],
-        'list_id': campaign['list_id']
-    })
+    if 'automation' not in campaign:
+        new_events.append({
+            'email': email,
+            'action': 'send',
+            'timestamp': transform_send_time(campaign['sent_at']),
+            'campaign_id': campaign['id'],
+            'campaign_title': campaign['title'],
+            'list_id': campaign['list_id']
+        })
 
     for event in events:
         new_events.append({
@@ -153,7 +165,7 @@ def write_records_and_update_state(entity, stream,
 def convert_to_iso_string(date):
     return pendulum.parse(date).to_iso8601_string()
 
-def handle_campaign_subscriber_activity_response(response, stream, c, last_updated):
+def handle_subscriber_activity_response(response, stream, c, last_updated):
     batched_records = []
     for r in response.iter_lines():
         if r:
@@ -165,7 +177,6 @@ def handle_campaign_subscriber_activity_response(response, stream, c, last_updat
 
                 batched_records = []
     return batched_records
-
 
 def handle_list_members_response(response, stream, l, last_updated):
     header = None
@@ -199,9 +210,11 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
             with ctx.client.export_post(
                     stream, entity, last_updated, params
             ) as res:
-                if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
+                if stream in (
+                        IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY,
+                        IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY):
                     batched_records = \
-                        handle_campaign_subscriber_activity_response(
+                        handle_subscriber_activity_response(
                             res, stream, entity, last_updated
                         )
                 elif stream == IDS.LIST_MEMBERS:
@@ -267,13 +280,13 @@ def call_stream_incremental(ctx, stream):
     last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(stream)) or \
                    defaultdict(str)
 
-    stream_resource = stream.split('_')[0]
+    stream_resource = SUB_STREAMS[stream]
 
-    for e in getattr(ctx, stream_resource + 's'):
+    for e in getattr(ctx, stream_resource):
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream} id: {id}, since: {since}'.format(
-            stream=stream_resource,
+            stream=stream_resource.split('/')[-1][:-1],
             id=e['id'],
             since=last_updated[e['id']],
         ))
@@ -281,7 +294,8 @@ def call_stream_incremental(ctx, stream):
         handlers = {
             IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: run_export_request,
             IDS.LIST_MEMBERS: run_v3_request,
-            IDS.CAMPAIGN_UNSUBSCRIBES: run_v3_request
+            IDS.CAMPAIGN_UNSUBSCRIBES: run_v3_request,
+            IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: run_export_request
         }
         handlers[stream](ctx, e, stream, last_updated)
 
@@ -291,23 +305,26 @@ def call_stream_incremental(ctx, stream):
 
     return last_updated
 
-def call_stream_full(ctx, stream):
+def call_stream_full(ctx, stream, item_id=None):
     records = []
     offset = 0
+    content_key = V3_API_INDEX_NAMES.get(stream, stream)
     while True:
         params = {'offset': offset}
         if stream == IDS.CAMPAIGNS:
             params['status'] = 'sent'
             params[V3_SINCE_KEY[stream]] = ctx.get_start_date()
 
-        response = ctx.client.GET(stream, params)
+        response = ctx.client.GET(stream, params, item_id)
         content = json.loads(response.content)
-        records += content[stream]
+        records += content[content_key]
         item_count = content['total_items']
-        if len(content[stream]) == 0:
+        if len(content[content_key]) == 0:
             break
-        offset += len(content[stream])
-    write_records(stream, records)
+        offset += len(content[content_key])
+
+    if not item_id:
+        write_records(stream, records)
 
     getattr(ctx, 'save_%s_meta' % stream)(records)
 

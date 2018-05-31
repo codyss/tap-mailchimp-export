@@ -10,6 +10,9 @@ class IDS(object):
     CAMPAIGN_UNSUBSCRIBES = "campaign_unsubscribes"
     LISTS = "lists"
     LIST_MEMBERS = "list_members"
+    AUTOMATION_WORKFLOWS = "automation_workflows"
+    AUTOMATION_WORKFLOW_EMAILS = "automation_workflow_emails"
+    AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY = "automation_workflow_subscriber_activity"
 
 stream_ids = [getattr(IDS, x) for x in dir(IDS)
               if not x.startswith("__")]
@@ -20,35 +23,56 @@ PK_FIELDS = {
     IDS.LISTS: ["id"],
     IDS.LIST_MEMBERS: ["email"],
     IDS.CAMPAIGN_UNSUBSCRIBES: ["email"],
+    IDS.AUTOMATION_WORKFLOWS: ["id"],
+    IDS.AUTOMATION_WORKFLOW_EMAILS: ["id"],
+    IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: ["email"]
 }
 
 EXPORT_API_PATH_NAMES = {
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "campaignSubscriberActivity",
-    IDS.LIST_MEMBERS: "list"
+    IDS.LIST_MEMBERS: "list",
+    IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: "campaignSubscriberActivity"
 }
 
 V3_API_PATH_NAMES = {
     IDS.LIST_MEMBERS: "members",
-    IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribed"
+    IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribed",
+    IDS.AUTOMATION_WORKFLOW_EMAILS: "emails"
 }
 
 V3_API_INDEX_NAMES = {
     IDS.LIST_MEMBERS: "members",
-    IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribes"
+    IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribes",
+    IDS.AUTOMATION_WORKFLOWS: "automations",
+    IDS.AUTOMATION_WORKFLOW_EMAILS: "emails"
 }
 
 V3_API_ENDPOINT_NAMES = {
     IDS.CAMPAIGNS: "campaigns",
     IDS.LISTS: "lists",
     IDS.LIST_MEMBERS: "lists",
-    IDS.CAMPAIGN_UNSUBSCRIBES: "reports"
+    IDS.CAMPAIGN_UNSUBSCRIBES: "reports",
+    IDS.AUTOMATION_WORKFLOWS: "automations",
+    IDS.AUTOMATION_WORKFLOW_EMAILS: "automations"
 }
 
 V3_SINCE_KEY = {
     IDS.CAMPAIGNS: "since_send_time",
     IDS.LIST_MEMBERS: "since_last_changed",
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "since",
-    IDS.LISTS: "since_date_created"
+    IDS.LISTS: "since_date_created",
+    IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: "since"
+}
+
+SUB_STREAMS = {
+    IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: IDS.AUTOMATION_WORKFLOW_EMAILS,
+    IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: IDS.CAMPAIGNS,
+    IDS.CAMPAIGN_UNSUBSCRIBES: IDS.CAMPAIGNS,
+    IDS.LIST_MEMBERS: IDS.LISTS
+}
+
+INTERMEDIATE_STREAMS = {
+    IDS.AUTOMATION_WORKFLOWS: IDS.AUTOMATION_WORKFLOW_EMAILS
 }
 
 
