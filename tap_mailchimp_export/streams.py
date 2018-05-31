@@ -1,6 +1,7 @@
 import singer
 from .schemas import (
-    IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY, INTERMEDIATE_STREAMS, SUB_STREAMS
+    IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY, INTERMEDIATE_STREAMS, SUB_STREAMS,
+    INTERMEDIATE_STREAM_BAD_STATUSES
 )
 from .context import convert_to_mc_date
 import time
@@ -76,10 +77,12 @@ def sync(ctx):
 
     for stream in ctx.selected_stream_ids:
         if stream in INTERMEDIATE_STREAMS:
+            bad_status = INTERMEDIATE_STREAM_BAD_STATUSES.get(stream)
             for entity in getattr(ctx, stream):
-                call_stream_full(
-                    ctx, INTERMEDIATE_STREAMS[stream], entity['id']
-                )
+                if not bad_status or entity[bad_status[0]] != bad_status[1]:
+                    call_stream_full(
+                        ctx, INTERMEDIATE_STREAMS[stream], entity['id']
+                    )
 
     for stream in ctx.selected_stream_ids:
         if stream.upper() in BOOK.get_incremental_syncs():
@@ -236,7 +239,9 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
     else:
         logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
-def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
+def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param_id=None):
+    if not param_id:
+        param_id = entity['id']
     batched_records = []
     record_key = V3_API_INDEX_NAMES[stream]
     start_date = ctx.get_start_date()
@@ -251,7 +256,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0):
                 if start_date and V3_SINCE_KEY.get(stream):
                     params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
 
-                response = ctx.client.GET(stream, params, item_id=entity['id'])
+                response = ctx.client.GET(stream, params, item_id=param_id)
                 content = json.loads(response.content)
                 if len(content[record_key]) == 0:
                     break
@@ -297,7 +302,11 @@ def call_stream_incremental(ctx, stream):
             IDS.CAMPAIGN_UNSUBSCRIBES: run_v3_request,
             IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: run_export_request
         }
-        handlers[stream](ctx, e, stream, last_updated)
+        if stream == IDS.CAMPAIGN_UNSUBSCRIBES and e['variate_combination_ids']:
+            for combo_id in e['variate_combination_ids']:
+                handlers[stream](ctx, e, stream, last_updated, param_id=combo_id)
+        else:
+            handlers[stream](ctx, e, stream, last_updated)
 
         ctx.set_bookmark_and_write_state(
             BOOK.return_bookmark_path(stream),

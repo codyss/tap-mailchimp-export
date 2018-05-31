@@ -90,14 +90,22 @@ class Context(object):
         singer.write_state(self.state)
 
     def save_campaigns_meta(self, campaigns):
-        setattr(self, IDS.CAMPAIGNS, [
-            {
+        all_campaigns = []
+
+        for c in campaigns:
+            variate_combination_ids = []
+            if c['type'] == 'variate':
+                variate_combination_ids = [
+                    combo['id'] for combo in c['variate_settings']['combinations']
+                ]
+            all_campaigns.append({
                 'id': c['id'],
                 'title': c['settings']['title'],
                 'list_id': c['recipients']['list_id'],
                 'sent_at': c['send_time'],
-            } for c in campaigns
-        ])
+                'variate_combination_ids': variate_combination_ids
+            })
+        setattr(self, IDS.CAMPAIGNS, all_campaigns)
 
     def save_lists_meta(self, lists):
         setattr(self, IDS.LISTS, [
@@ -113,11 +121,15 @@ class Context(object):
                 'id': w['id'],
                 'title': w['settings']['title'],
                 'list_id': w['recipients']['list_id'],
-                'sent_at': w['start_time']
+                'sent_at': w['start_time'],
+                'status': w['status']
             } for w in workflows
         ])
 
     def save_automation_workflow_emails_meta(self, emails):
+        current_emails = []
+        if hasattr(self, IDS.AUTOMATION_WORKFLOW_EMAILS):
+            current_emails = getattr(self, IDS.AUTOMATION_WORKFLOW_EMAILS)
         setattr(self, IDS.AUTOMATION_WORKFLOW_EMAILS, [
             {
                 'id': e['id'],
@@ -126,4 +138,4 @@ class Context(object):
                 'started_at': e['start_time'],
                 'automation': True
             } for e in emails
-        ])
+        ] + current_emails)
