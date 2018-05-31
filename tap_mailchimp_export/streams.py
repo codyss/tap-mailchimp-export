@@ -116,7 +116,7 @@ def transform_event(record, campaign):
 
     new_events = []
 
-    if not campaign.get('automation'):
+    if 'automation' not in campaign:
         new_events.append({
             'email': email,
             'action': 'send',
@@ -210,7 +210,9 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
             with ctx.client.export_post(
                     stream, entity, last_updated, params
             ) as res:
-                if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
+                if stream in (
+                        IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY,
+                        IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY):
                     batched_records = \
                         handle_subscriber_activity_response(
                             res, stream, entity, last_updated
@@ -219,11 +221,6 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
                     batched_records = handle_list_members_response(
                         res, stream, entity, last_updated
                     )
-                elif stream == IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY:
-                    batched_records = \
-                        handle_subscriber_activity_response(
-                            res, stream, entity, last_updated
-                        )
 
                 if batched_records:
                     write_records_and_update_state(
