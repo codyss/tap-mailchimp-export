@@ -43,6 +43,7 @@ class BOOK(object):
     CAMPAIGN_UNSUBSCRIBES = [IDS.CAMPAIGN_UNSUBSCRIBES, "timestamp"]
     AUTOMATION_WORKFLOWS = [IDS.AUTOMATION_WORKFLOWS]
     AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY = [IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY, "timestamp"]
+    AUTOMATION_WORKFLOW_UNSUBSCRIBES = [IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES, "timestamp"]
 
 
     @classmethod
@@ -119,7 +120,7 @@ def transform_event(record, campaign):
 
     new_events = []
 
-    if 'automation' not in campaign:
+    if 'workflow_id' not in campaign:
         new_events.append({
             'email': email,
             'action': 'send',
@@ -139,6 +140,7 @@ def transform_event(record, campaign):
             'timestamp': event['timestamp'],
             'url': event['url'],
             'uuid': str(uuid.uuid1()),
+            'workflow_id': campaign.get('workflow_id')
         })
 
     return new_events
@@ -239,6 +241,17 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
     else:
         logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
+def v3_postprocess(records, entity, stream):
+    if stream == IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES:
+        for record in records:
+            record['workflow_id'] = entity['workflow_id']
+            record['workflow_email_id'] = entity['id']
+    elif stream == IDS.CAMPAIGN_UNSUBSCRIBES:
+        for record in records:
+            record['variate_id'] = record['campaign_id']
+            record['campaign_id'] = entity['id']
+    return records
+
 def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param_id=None):
     if not param_id:
         param_id = entity['id']
@@ -258,10 +271,12 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param
 
                 response = ctx.client.GET(stream, params, item_id=param_id)
                 content = json.loads(response.content)
-                if len(content[record_key]) == 0:
+                records = v3_postprocess(content[record_key], entity, stream)
+
+                if len(records) == 0:
                     break
-                offset += len(content[record_key])
-                batched_records += content[record_key]
+                offset += len(records)
+                batched_records += records
                 if len(batched_records) > BATCH_SIZE:
                     write_records_and_update_state(
                         entity, stream, batched_records, last_updated)
@@ -300,7 +315,8 @@ def call_stream_incremental(ctx, stream):
             IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: run_export_request,
             IDS.LIST_MEMBERS: run_v3_request,
             IDS.CAMPAIGN_UNSUBSCRIBES: run_v3_request,
-            IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: run_export_request
+            IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: run_export_request,
+            IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES: run_v3_request
         }
         if stream == IDS.CAMPAIGN_UNSUBSCRIBES and e['variate_combination_ids']:
             for combo_id in e['variate_combination_ids']:

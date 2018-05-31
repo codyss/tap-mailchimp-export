@@ -136,6 +136,6 @@ class Context(object):
                 'title': e['settings']['title'],
                 'list_id': e['recipients']['list_id'],
                 'started_at': e['start_time'],
-                'automation': True
+                'workflow_id': e['workflow_id']
             } for e in emails
         ] + current_emails)
