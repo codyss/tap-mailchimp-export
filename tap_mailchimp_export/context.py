@@ -6,6 +6,8 @@ from mailsnake import MailSnake
 from .http import Client
 from .schemas import IDS
 
+DEFAULT_LOOKBACK_DAYS = 30
+
 def convert_to_mc_date(iso_string):
     return pendulum.parse(iso_string).to_datetime_string()
 
@@ -32,7 +34,6 @@ class Context(object):
         self.lists = []
         self.selected_stream_ids = None
         self.now = datetime.utcnow()
-        self.lookback_days = config.get('lookback_days')
 
     @property
     def catalog(self):
@@ -81,10 +82,13 @@ class Context(object):
             self.set_bookmark(path, val)
         return pendulum.parse(val)
 
+    def get_lookback_date(self):
+        new_date = self.now - timedelta(
+            days=self.config.get('lookback_days', DEFAULT_LOOKBACK_DAYS))
+        return convert_to_mc_date(new_date.strftime("%Y-%m-%d"))
+
     def get_start_date(self):
-        if self.lookback_days:
-            new_date = self.now - timedelta(days=self.lookback_days)
-            return convert_to_mc_date(new_date.strftime("%Y-%m-%d"))
+        return self.config['start_date']
 
     def write_state(self):
         singer.write_state(self.state)

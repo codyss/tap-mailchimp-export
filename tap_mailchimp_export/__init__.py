@@ -8,7 +8,7 @@ from . import streams as streams_
 from .context import Context
 from . import schemas
 
-REQUIRED_CONFIG_KEYS = ["apikey"]
+REQUIRED_CONFIG_KEYS = ["apikey", "start_date"]
 LOGGER = singer.get_logger()
 
 
@@ -46,8 +46,9 @@ def main():
         discover(ctx).dump()
         print()
     else:
-        ctx.catalog = Catalog.from_dict(args.properties) \
-            if args.properties else discover(ctx)
+        # ctx.catalog = Catalog.from_dict(args.properties) \
+        #     if args.properties else discover(ctx)
+        ctx.catalog = args.catalog
         sync(ctx)
 
 if __name__ == "__main__":

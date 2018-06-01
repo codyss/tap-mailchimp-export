@@ -1,7 +1,6 @@
 import singer
 from .schemas import (
-    IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY, INTERMEDIATE_STREAMS, SUB_STREAMS,
-    INTERMEDIATE_STREAM_BAD_STATUSES
+    IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY, INTERMEDIATE_STREAMS, SUB_STREAMS
 )
 from .context import convert_to_mc_date
 import time
@@ -36,6 +35,14 @@ def write_records(tap_stream_id, records):
 
 
 class BOOK(object):
+    """
+    The streams defined here outline the items that for which we're going to
+    gather data. Those with two items are incremental streams, and the second
+    item is the time key used to save the state for items in that stream.
+
+    NB: There are a few other endpoints hit that are used to connect full
+    streams to incremental streams
+    """
     CAMPAIGNS = [IDS.CAMPAIGNS]
     CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY, "timestamp"]
     LISTS = [IDS.LISTS]
@@ -71,19 +78,26 @@ class BOOK(object):
         return syncs
 
 def sync(ctx):
-    # do full syncs first as they are used later
+    """
+    This is the main method of the tap. We perform the full streams first, as
+    they are used in the incremental streams.
+
+    We then perform a set of
+    intermediate streams. These are streams whose data we don't save, whose ids
+    are necessary to query incrementals downstream.
+
+    Lastly, we perform our incremental syncs
+    """
     for stream in ctx.selected_stream_ids:
         if stream.upper() in BOOK.get_full_syncs():
             call_stream_full(ctx, stream)
 
     for stream in ctx.selected_stream_ids:
         if stream in INTERMEDIATE_STREAMS:
-            bad_status = INTERMEDIATE_STREAM_BAD_STATUSES.get(stream)
             for entity in getattr(ctx, stream):
-                if not bad_status or entity[bad_status[0]] != bad_status[1]:
-                    call_stream_full(
-                        ctx, INTERMEDIATE_STREAMS[stream], entity['id']
-                    )
+                call_stream_full(
+                    ctx, INTERMEDIATE_STREAMS[stream], entity['id']
+                )
 
     for stream in ctx.selected_stream_ids:
         if stream.upper() in BOOK.get_incremental_syncs():
@@ -96,9 +110,11 @@ def transform_send_time(sent_at):
     timestamps returned by clicks/opens.
     2018-04-12T13:30:00+00:00  -->  2018-04-12 20:52:45
     """
+    if 'T' not in sent_at:
+        return sent_at
     return sent_at.replace('T', ' ')[:-6]
 
-def transform_event(record, campaign):
+def transform_event(record, campaign, include_sends):
     """
     {'test@example.com':
     [{'action': 'open', 'timestamp': '2018-04-01 22:23:21', 'url': None, 'ip': '66.249.88.148'},
@@ -107,7 +123,6 @@ def transform_event(record, campaign):
     :param campaign: Campaign metadata dict
     :yield: enriched events to support downstream analytics
     """
-
     record = record.decode('utf-8')
     obj = json.loads(record)
     if 'error' in obj.keys():
@@ -120,7 +135,9 @@ def transform_event(record, campaign):
 
     new_events = []
 
-    if 'workflow_id' not in campaign:
+
+    if 'workflow_id' not in campaign and include_sends:
+        # We're backfilling, so we'll want to add a send event here
         new_events.append({
             'email': email,
             'action': 'send',
@@ -131,6 +148,7 @@ def transform_event(record, campaign):
         })
 
     for event in events:
+        # Get relevant information on each action (send, click) for this email
         new_events.append({
             'email': email,
             'campaign_id': campaign['id'],
@@ -147,6 +165,10 @@ def transform_event(record, campaign):
 
 
 def get_latest_record_timestamp(records, last_updated, time_key):
+    """
+    Get the last record, whether that's from the existing bookkeeping or a new
+    record we just pulled
+    """
     if records:
         record_max = max([r[time_key] for r in records])
         if last_updated:
@@ -170,12 +192,17 @@ def write_records_and_update_state(entity, stream,
 def convert_to_iso_string(date):
     return pendulum.parse(date).to_iso8601_string()
 
-def handle_subscriber_activity_response(response, stream, c, last_updated):
+def handle_subscriber_activity_response(response, stream, c, last_updated, include_sends):
+    """
+    Iterate through the response of a subscriber activity request from the
+    export api, writing records as we hit the batch size
+    """
     batched_records = []
     for r in response.iter_lines():
         if r:
-            batched_records = batched_records + transform_event(r, c)
+            batched_records = batched_records + transform_event(r, c, include_sends)
 
+            # If there are leftover records, write them!
             if len(batched_records) > BATCH_SIZE:
                 write_records_and_update_state(
                     c, stream, batched_records, last_updated)
@@ -184,6 +211,10 @@ def handle_subscriber_activity_response(response, stream, c, last_updated):
     return batched_records
 
 def handle_list_members_response(response, stream, l, last_updated):
+    """
+    Iterate through the response of a list membership request from the
+    export api, writing records as we hit the batch size
+    """
     header = None
     batched_records = []
     for r in response.iter_lines():
@@ -192,6 +223,7 @@ def handle_list_members_response(response, stream, l, last_updated):
                 batched_records = batched_records + [dict(
                     zip(header, json.loads(r.decode('utf-8'))))]
 
+                # If there are leftover records, write them!
                 if len(batched_records) > BATCH_SIZE:
                     write_records_and_update_state(
                         l, stream, batched_records, last_updated)
@@ -202,14 +234,24 @@ def handle_list_members_response(response, stream, l, last_updated):
     return batched_records
 
 def run_export_request(ctx, entity, stream, last_updated, retries=0):
+    """
+    This is the main wrapper over Mailchimp's export API. It does the following:
+    1. Preps the parameters for the export request depending on the id of the
+        campaign, whether this is a backfill and what date we're looking back to
+    2. Makes the call to the export API
+    3. Processes the response
+    4. Handles any errors by retrying
+    """
     batched_records = []
-    start_date = ctx.get_start_date()
     params = {
-        'id': entity['id'],
-        'include_empty': True
+        'id': entity['id']
     }
-    if start_date:
-        params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
+
+    include_sends = False
+    params[V3_SINCE_KEY[stream]] = transform_send_time(last_updated[entity['id']])
+    if last_updated[entity['id']] == ctx.get_start_date():
+        params['include_empty'] = True
+        include_sends = True
     if retries < 3:
         try:
             with ctx.client.export_post(
@@ -220,7 +262,7 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
                         IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY):
                     batched_records = \
                         handle_subscriber_activity_response(
-                            res, stream, entity, last_updated
+                            res, stream, entity, last_updated, include_sends
                         )
                 elif stream == IDS.LIST_MEMBERS:
                     batched_records = handle_list_members_response(
@@ -241,23 +283,38 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
     else:
         logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
-def v3_postprocess(records, entity, stream):
-    if stream == IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES:
-        for record in records:
+def v3_postprocess(records, entity, stream, last_updated):
+    """
+    These endpoints have intermediate resources that we use (i.e. they aren't
+    keyed off Automation Workflow or Campaign, but have to hit another endpoint
+    in between). Thus, we need to change their attributes to point at the
+    top-level resource.
+    """
+    processed_records = []
+    for record in records:
+        if stream == IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES:
             record['workflow_id'] = entity['workflow_id']
             record['workflow_email_id'] = entity['id']
-    elif stream == IDS.CAMPAIGN_UNSUBSCRIBES:
-        for record in records:
+        elif stream == IDS.CAMPAIGN_UNSUBSCRIBES:
             record['variate_id'] = record['campaign_id']
             record['campaign_id'] = entity['id']
-    return records
+
+        if record[BOOK.return_bookmark_path(stream)[1]] <= \
+           last_updated[entity['id']]:
+            continue
+        processed_records.append(record)
+    return processed_records
 
 def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param_id=None):
+    """
+    This is the main wrapper over Mailchimp's V3 API. It does more or less the
+    same things that the export API does, but it handles list membership and 
+    unsubscribe events rather than email activity
+    """
     if not param_id:
         param_id = entity['id']
     batched_records = []
     record_key = V3_API_INDEX_NAMES[stream]
-    start_date = ctx.get_start_date()
 
     if retries < 20:
         try:
@@ -266,12 +323,13 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param
                     'offset': offset,
                     'count': PAGE_SIZE,
                 }
-                if start_date and V3_SINCE_KEY.get(stream):
-                    params[V3_SINCE_KEY[stream]] = last_updated.get(id, start_date)
+                if V3_SINCE_KEY.get(stream):
+                    params[V3_SINCE_KEY[stream]] = transform_send_time(
+                        last_updated[entity['id']])
 
                 response = ctx.client.GET(stream, params, item_id=param_id)
                 content = json.loads(response.content)
-                records = v3_postprocess(content[record_key], entity, stream)
+                records = v3_postprocess(content[record_key], entity, stream, last_updated)
 
                 if len(records) == 0:
                     break
@@ -305,11 +363,14 @@ def call_stream_incremental(ctx, stream):
     for e in getattr(ctx, stream_resource):
         ctx.update_latest(e['id'], last_updated)
 
-        logger.info('querying {stream} id: {id}, since: {since}'.format(
-            stream=stream_resource.split('/')[-1][:-1],
-            id=e['id'],
-            since=last_updated[e['id']],
-        ))
+        logger.info('querying {stream_resource} id: {id}, since: {since}, '
+            'for: {stream}'.format(
+                stream_resource=stream_resource.split('_')[-1][:-1],
+                id=e['id'],
+                since=last_updated[e['id']],
+                stream=stream.split('_')[-1]
+            )
+        )
 
         handlers = {
             IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: run_export_request,
@@ -330,6 +391,20 @@ def call_stream_incremental(ctx, stream):
 
     return last_updated
 
+def filter_records(ctx, stream, records):
+    filtered_records = []
+
+    for record in records:
+        if stream == IDS.CAMPAIGNS:
+            last_updated = ctx.get_bookmark(BOOK.return_bookmark_path(
+                           IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY)) or defaultdict(str)
+            if not record['id'] in last_updated or record['send_time'] > \
+                                                   ctx.get_lookback_date():
+                filtered_records.append(record)
+        else:
+            filtered_records.append(record)
+    return filtered_records
+
 def call_stream_full(ctx, stream, item_id=None):
     records = []
     offset = 0
@@ -338,7 +413,8 @@ def call_stream_full(ctx, stream, item_id=None):
         params = {'offset': offset}
         if stream == IDS.CAMPAIGNS:
             params['status'] = 'sent'
-            params[V3_SINCE_KEY[stream]] = ctx.get_start_date()
+        if stream == IDS.AUTOMATION_WORKFLOWS:
+            params['status'] = 'sending'
 
         response = ctx.client.GET(stream, params, item_id)
         content = json.loads(response.content)
@@ -351,7 +427,7 @@ def call_stream_full(ctx, stream, item_id=None):
     if not item_id:
         write_records(stream, records)
 
-    getattr(ctx, 'save_%s_meta' % stream)(records)
+    getattr(ctx, 'save_%s_meta' % stream)(filter_records(ctx, stream, records))
 
 def save_state(ctx, stream, bk):
     ctx.set_bookmark(BOOK.return_bookmark_path(stream), bk)

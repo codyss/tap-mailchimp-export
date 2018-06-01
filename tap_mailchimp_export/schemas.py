@@ -81,11 +81,6 @@ INTERMEDIATE_STREAMS = {
     IDS.AUTOMATION_WORKFLOWS: IDS.AUTOMATION_WORKFLOW_EMAILS
 }
 
-INTERMEDIATE_STREAM_BAD_STATUSES = {
-    IDS.AUTOMATION_WORKFLOWS: ('status', 'save')
-}
-
-
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
