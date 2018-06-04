@@ -124,7 +124,12 @@ def transform_event(record, campaign, include_sends):
     :yield: enriched events to support downstream analytics
     """
     record = record.decode('utf-8')
+    if not record.strip(' '):
+        logger.info('No new records found for campaign {}'.format(campaign['id']))
+        return []
     obj = json.loads(record)
+
+
     if 'error' in obj.keys():
         raise Exception(record)
 
