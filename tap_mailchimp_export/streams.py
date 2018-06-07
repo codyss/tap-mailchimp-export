@@ -305,7 +305,7 @@ def v3_postprocess(records, entity, stream, last_updated):
             record['campaign_id'] = entity['id']
 
         if record[BOOK.return_bookmark_path(stream)[1]] <= \
-           last_updated[entity['id']]:
+           last_updated[entity['id']] and stream != IDS.LIST_MEMBERS:
             continue
         processed_records.append(record)
     return processed_records
