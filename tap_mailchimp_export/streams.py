@@ -320,6 +320,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param
         param_id = entity['id']
     batched_records = []
     record_key = V3_API_INDEX_NAMES[stream]
+    since_date = transform_send_time(last_updated[entity['id']])
 
     if retries < 20:
         try:
@@ -329,8 +330,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param
                     'count': PAGE_SIZE,
                 }
                 if V3_SINCE_KEY.get(stream):
-                    params[V3_SINCE_KEY[stream]] = transform_send_time(
-                        last_updated[entity['id']])
+                    params[V3_SINCE_KEY[stream]] = since_date
 
                 response = ctx.client.GET(stream, params, item_id=param_id)
                 content = json.loads(response.content)
