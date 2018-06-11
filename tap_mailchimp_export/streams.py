@@ -186,12 +186,16 @@ def get_latest_record_timestamp(records, last_updated, time_key):
 def write_records_and_update_state(entity, stream,
                                    batched_records, last_updated):
     write_records(stream, batched_records)
+    update_state(entity, stream, batched_records, last_updated)
+
+def update_state(entity, stream, batched_records, last_updated):
     last_updated[entity['id']] = convert_to_iso_string(
         get_latest_record_timestamp(
             batched_records,
             last_updated[entity['id']],
             BOOK.return_bookmark_path(stream)[1]
-        ))
+        )
+    )
 
 
 def convert_to_iso_string(date):
@@ -238,7 +242,7 @@ def handle_list_members_response(response, stream, l, last_updated):
                 header = json.loads(r.decode('utf-8'))
     return batched_records
 
-def run_export_request(ctx, entity, stream, last_updated, retries=0):
+def run_export_request(ctx, entity, stream, last_updated, retries=0, param_id=None):
     """
     This is the main wrapper over Mailchimp's export API. It does the following:
     1. Preps the parameters for the export request depending on the id of the
@@ -254,9 +258,11 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0):
 
     include_sends = False
     params[V3_SINCE_KEY[stream]] = transform_send_time(last_updated[entity['id']])
-    if last_updated[entity['id']] == ctx.get_start_date():
+    if last_updated[entity['id']] == ctx.get_start_date() and not param_id:
         params['include_empty'] = True
         include_sends = True
+    if param_id:
+        params['id'] = param_id
     if retries < 3:
         try:
             with ctx.client.export_post(
@@ -384,9 +390,19 @@ def call_stream_incremental(ctx, stream):
             IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: run_export_request,
             IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES: run_v3_request
         }
-        if stream == IDS.CAMPAIGN_UNSUBSCRIBES and e['variate_combination_ids']:
+
+        if stream in (IDS.CAMPAIGN_UNSUBSCRIBES, IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY) \
+                     and e['variate_combination_ids']:
+            most_recent_record = last_updated[e['id']]
+            previous_record = last_updated[e['id']]
             for combo_id in e['variate_combination_ids']:
                 handlers[stream](ctx, e, stream, last_updated, param_id=combo_id)
+                most_recent_record = max(most_recent_record, last_updated[e['id']])
+                last_updated[e['id']] = previous_record
+            if stream == IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY:
+                if last_updated[e['id']] == ctx.get_start_date():
+                    handlers[stream](ctx, e, stream, last_updated)
+                last_updated[e['id']] = most_recent_record
         else:
             handlers[stream](ctx, e, stream, last_updated)
 
