@@ -102,6 +102,8 @@ class Context(object):
                 variate_combination_ids = [
                     combo['id'] for combo in c['variate_settings']['combinations']
                 ]
+                if c['variate_settings'].get('winning_campaign_id'):
+                    variate_combination_ids.append(c['variate_settings']['winning_campaign_id'])
             all_campaigns.append({
                 'id': c['id'],
                 'title': c['settings']['title'],
