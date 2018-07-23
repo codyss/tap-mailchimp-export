@@ -1,5 +1,177 @@
 {
   "type": "object",
-  "properties": {
+   "properties": {
+    "email_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "email_address": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "list_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "reason": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "campaign_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "vip": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "_links": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "targetSchema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "href": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    },
+    "list_is_active": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "timestamp": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "variate_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "merge_fields": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "SUBCONFIRM": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "FNAME": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "COUNTRY": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "AGE": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "LNAME": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "SOURCE": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "PURCHASED": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "CONFIRMDAT": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "MMERGE9": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "SIGNUPDATE": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "PHONE": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ADDRESS": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    }
   }
 }

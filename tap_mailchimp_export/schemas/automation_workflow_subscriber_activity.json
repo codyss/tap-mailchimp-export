@@ -1,5 +1,58 @@
 {
   "type": "object",
   "properties": {
-  }
+    "uuid": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "timestamp": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "campaign_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "workflow_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "campaign_title": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "list_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "action": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "email": {
+      "type": [
+        "null",
+        "string"
+      ]
+    }
 }

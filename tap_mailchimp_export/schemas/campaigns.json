@@ -1,5 +1,645 @@
 {
   "type": "object",
   "properties": {
+    "status": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "tracking": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "text_clicks": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "ecomm360": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "goal_tracking": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "clicktale": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "html_clicks": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "google_analytics": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "opens": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "web_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "recipients": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "segment_opts": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "saved_segment_id": {
+              "type": [
+                "null",
+                "integer"
+              ]
+            },
+            "conditions": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "properties": {
+                  "field": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "condition_type": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "value": {
+                    "type": [
+                      "null",
+                      "string",
+                      "array",
+                      "integer"
+                    ],
+                    "items": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "op": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "extra": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  }
+                }
+              }
+            },
+            "match": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        },
+        "recipient_count": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "list_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "list_is_active": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "segment_text": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "list_name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "long_archive_url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "archive_url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "report_summary": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "open_rate": {
+          "type": [
+            "null",
+            "number",
+            "integer"
+          ]
+        },
+        "click_rate": {
+          "type": [
+            "null",
+            "number",
+            "integer"
+          ]
+        },
+        "subscriber_clicks": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "ecommerce": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "total_spent": {
+              "type": [
+                "null",
+                "integer",
+                "number"
+              ]
+            },
+            "total_revenue": {
+              "type": [
+                "null",
+                "integer",
+                "number"
+              ]
+            },
+            "total_orders": {
+              "type": [
+                "null",
+                "integer"
+              ]
+            }
+          }
+        },
+        "clicks": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "opens": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "unique_opens": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        }
+      }
+    },
+    "create_time": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "_links": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "targetSchema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "href": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    },
+    "content_type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "send_time": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "delivery_status": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "status": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "can_cancel": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "emails_sent": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "enabled": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "emails_canceled": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        }
+      }
+    },
+    "emails_sent": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "settings": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "subject_line": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "from_name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "use_conversation": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "title": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "inline_css": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "fb_comments": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "template_id": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "timewarp": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "auto_footer": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "authenticate": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "to_name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "folder_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "reply_to": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "preview_text": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "auto_tweet": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "drag_and_drop": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "needs_block_refresh": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "variate_settings": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "winning_campaign_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "send_times": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "from_names": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "reply_to_addresses": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "wait_time": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "combinations": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "subject_line": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "from_name": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "recipients": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "content_description": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "send_time": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "reply_to": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          }
+        },
+        "test_size": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "winner_criteria": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "subject_lines": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "winning_combination_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "contents": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    }
   }
 }
