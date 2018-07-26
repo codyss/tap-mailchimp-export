@@ -194,7 +194,7 @@
     "merge_fields": {
       "type": [
         "null",
-        "string"
+        "object"
       ]
     },
     "id": {
