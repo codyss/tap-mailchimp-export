@@ -168,6 +168,7 @@
         "ADDRESS": {
           "type": [
             "null",
+            "object",
             "string"
           ]
         }
