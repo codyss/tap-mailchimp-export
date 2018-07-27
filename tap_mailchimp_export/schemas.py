@@ -11,6 +11,7 @@ class IDS(object):
     LISTS = "lists"
     LIST_MEMBERS = "list_members"
     AUTOMATION_WORKFLOWS = "automation_workflows"
+    AUTOMATION_WORKFLOW_EMAILS = "automation_workflow_emails"
     AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY = "automation_workflow_subscriber_activity"
     AUTOMATION_WORKFLOW_UNSUBSCRIBES = "automation_workflow_unsubscribes"
 

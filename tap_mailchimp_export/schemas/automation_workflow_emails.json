@@ -1,0 +1,149 @@
+{
+  "type": "object",
+  "properties": {
+    "workflow_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "email_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "queue": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "workflow_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "list_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email_address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "_links": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "properties": {
+                "rel": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "href": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "method": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "targetSchema": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "total_items": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "_links": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "rel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "href": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetSchema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
