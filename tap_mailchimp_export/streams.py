@@ -169,15 +169,6 @@ def transform_event(record, campaign, include_sends):
     return new_events
 
 
-def transform_send_time(sent_at):
-    """
-    Convert a sent at campaign time to the same timestamp format as the
-    timestamps returned by clicks/opens.
-    2018-04-12T13:30:00+00:00  -->  2018-04-12 20:52:45
-    """
-    return sent_at.replace('T', ' ')[:-6]
-
-
 def get_latest_record_timestamp(records, last_updated, time_key):
     """
     Get the last record, whether that's from the existing bookkeeping or a new
