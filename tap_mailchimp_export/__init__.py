@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import os
-import json
 import singer
 from singer import utils
 from singer.catalog import Catalog, CatalogEntry, Schema
@@ -34,9 +32,10 @@ def discover(ctx):
 
 def sync(ctx):
     for tap_stream_id in ctx.selected_stream_ids:
-        schemas.load_and_write_schema(tap_stream_id, ctx.catalog)
+        schemas.load_and_write_schema(tap_stream_id, ctx.catalog.to_dict())
     streams_.sync(ctx)
     ctx.write_state()
+
 
 @utils.handle_top_exception(LOGGER)
 def main():
