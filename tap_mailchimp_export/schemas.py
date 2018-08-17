@@ -15,6 +15,7 @@ class IDS(object):
     AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY = "automation_workflow_subscriber_activity"
     AUTOMATION_WORKFLOW_UNSUBSCRIBES = "automation_workflow_unsubscribes"
 
+
 stream_ids = [getattr(IDS, x) for x in dir(IDS)
               if not x.startswith("__")]
 
@@ -91,6 +92,14 @@ def load_schema(tap_stream_id):
     return utils.load_json(get_abs_path(path))
 
 
-def load_and_write_schema(tap_stream_id):
-    schema = load_schema(tap_stream_id)
-    singer.write_schema(tap_stream_id, schema, PK_FIELDS[tap_stream_id])
+def get_stream_from_catalog(stream_id, catalog):
+    streams = catalog['streams']
+    for s in streams:
+        if s['tap_stream_id'] == stream_id:
+            return s
+
+
+def load_and_write_schema(tap_stream_id, catalog):
+    stream = get_stream_from_catalog(tap_stream_id, catalog)
+    singer.write_schema(
+        tap_stream_id, stream['schema'], PK_FIELDS[tap_stream_id])
