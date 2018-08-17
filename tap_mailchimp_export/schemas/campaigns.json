@@ -3,8 +3,7 @@
   "properties": {
     "status": {
       "type": [
-        "null",
-        "string"
+        "integer"
       ]
     },
     "tracking": {
