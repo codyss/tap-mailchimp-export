@@ -316,7 +316,7 @@ def v3_postprocess(records, entity, stream, last_updated):
         processed_records.append(record)
     return processed_records
 
-def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param_id=None):
+def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param_id=None, since_date=None):
     """
     This is the main wrapper over Mailchimp's V3 API. It does more or less the
     same things that the export API does, but it handles list membership and 
@@ -326,7 +326,9 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param
         param_id = entity['id']
     batched_records = []
     record_key = V3_API_INDEX_NAMES[stream]
-    since_date = transform_send_time(last_updated[entity['id']])
+
+    if not since_date:
+        since_date = transform_send_time(last_updated[entity['id']])
 
     if retries < 20:
         try:
@@ -361,7 +363,7 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param
             logger.info('Waiting 30 seconds - then retrying')
             time.sleep(30)
             retries += 1
-            run_v3_request(ctx, entity, stream, last_updated, retries, offset)
+            run_v3_request(ctx, entity, stream, last_updated, retries=retries, offset=offset, since_date=since_date)
     else:
         logger.info('Too many fails for %s, continuing to others' % entity['id'])
 
