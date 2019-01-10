@@ -257,7 +257,7 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0, param_id=No
     }
 
     include_sends = False
-    params[V3_SINCE_KEY[stream]] = transform_send_time(last_updated[entity['id']])
+    params[V3_SINCE_KEY[stream][0]] = transform_send_time(last_updated[entity['id']])
     if last_updated[entity['id']] == ctx.get_start_date() and not param_id:
         params['include_empty'] = True
         include_sends = True
@@ -337,12 +337,34 @@ def run_v3_request(ctx, entity, stream, last_updated, retries=0, offset=0, param
                     'offset': offset,
                     'count': PAGE_SIZE,
                 }
-                if V3_SINCE_KEY.get(stream):
-                    params[V3_SINCE_KEY[stream]] = since_date
-
-                response = ctx.client.GET(stream, params, item_id=param_id)
-                content = json.loads(response.content)
-                records = v3_postprocess(content[record_key], entity, stream, last_updated)
+                if V3_SINCE_KEY.get(stream) and len(V3_SINCE_KEY[stream]) == 1:
+                    params[V3_SINCE_KEY[stream][0]] = since_date
+                    response = ctx.client.GET(stream, params, item_id=param_id)
+                    records = v3_postprocess(
+                        json.loads(response.content)[record_key],
+                        entity,
+                        stream,
+                        last_updated
+                    )
+                elif V3_SINCE_KEY.get(stream):
+                    records = []
+                    for i in range(0, len(V3_SINCE_KEY[stream])):
+                        params[V3_SINCE_KEY[stream][i]] = since_date
+                        response = ctx.client.GET(stream, params, item_id=param_id)
+                        records += v3_postprocess(
+                            json.loads(response.content)[record_key],
+                            entity,
+                            stream,
+                            last_updated
+                        )
+                else:
+                    response = ctx.client.GET(stream, params, item_id=param_id)
+                    records = v3_postprocess(
+                        json.loads(response.content)[record_key],
+                        entity,
+                        stream,
+                        last_updated
+                    )
 
                 if len(records) == 0:
                     break
