@@ -375,8 +375,6 @@ def call_stream_incremental(ctx, stream):
     stream_resource = SUB_STREAMS[stream]
 
     for e in getattr(ctx, stream_resource):
-        if e['id'] != ' b4e74ce71f':
-            continue
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream_resource} id: {id}, since: {since}, '
