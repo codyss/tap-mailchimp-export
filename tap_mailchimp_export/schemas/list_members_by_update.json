@@ -1,0 +1,225 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "timestamp_opt": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "stats": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "avg_click_rate": {
+          "type": [
+            "null",
+            "integer",
+            "number"
+          ]
+        },
+        "avg_open_rate": {
+          "type": [
+            "null",
+            "integer",
+            "number"
+          ]
+        }
+      }
+    },
+    "email_type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "language": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "email_address": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "timestamp_signup": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "last_changed": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "member_rating": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "list_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "vip": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "_links": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "targetSchema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "href": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    },
+    "location": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "gmtoff": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "dstoff": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "longitude": {
+          "type": [
+            "null",
+            "integer",
+            "number"
+          ]
+        },
+        "country_code": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "latitude": {
+          "type": [
+            "null",
+            "integer",
+            "number"
+          ]
+        },
+        "timezone": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "email_client": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "unique_email_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "ip_opt": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "merge_fields": {
+      "type": [
+        "null",
+        "object"
+      ]
+    },
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "ip_signup": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "interests": {
+      "type": [
+        "null",
+        "object"
+      ]
+    },
+    "unsubscribe_reason": {
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  }
+}

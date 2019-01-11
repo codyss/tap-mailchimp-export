@@ -46,7 +46,8 @@ class BOOK(object):
     CAMPAIGNS = [IDS.CAMPAIGNS]
     CAMPAIGN_SUBSCRIBER_ACTIVITY = [IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY, "timestamp"]
     LISTS = [IDS.LISTS]
-    LIST_MEMBERS = [IDS.LIST_MEMBERS, "last_changed"]
+    LIST_MEMBERS_BY_UPDATE = [IDS.LIST_MEMBERS_BY_UPDATE, "last_changed"]
+    LIST_MEMBERS_BY_CREATE = [IDS.LIST_MEMBERS_BY_CREATE, "timestamp_opt"]
     CAMPAIGN_UNSUBSCRIBES = [IDS.CAMPAIGN_UNSUBSCRIBES, "timestamp"]
     AUTOMATION_WORKFLOWS = [IDS.AUTOMATION_WORKFLOWS]
     AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY = [IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY, "timestamp"]
@@ -275,7 +276,7 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0, param_id=No
                         handle_subscriber_activity_response(
                             res, stream, entity, last_updated, include_sends
                         )
-                elif stream == IDS.LIST_MEMBERS:
+                elif stream in (IDS.LIST_MEMBERS_BY_UPDATE, IDS.LIST_MEMBERS_BY_CREATE):
                     batched_records = handle_list_members_response(
                         res, stream, entity, last_updated
                     )
@@ -311,7 +312,7 @@ def v3_postprocess(records, entity, stream, last_updated):
             record['campaign_id'] = entity['id']
 
         if record[BOOK.return_bookmark_path(stream)[1]] <= \
-           last_updated[entity['id']] and stream != IDS.LIST_MEMBERS:
+           last_updated[entity['id']] and stream not in (IDS.LIST_MEMBERS_BY_UPDATE, IDS.LIST_MEMBERS_BY_CREATE):
             continue
         processed_records.append(record)
     return processed_records
@@ -374,6 +375,8 @@ def call_stream_incremental(ctx, stream):
     stream_resource = SUB_STREAMS[stream]
 
     for e in getattr(ctx, stream_resource):
+        if e['id'] != ' b4e74ce71f':
+            continue
         ctx.update_latest(e['id'], last_updated)
 
         logger.info('querying {stream_resource} id: {id}, since: {since}, '
@@ -387,7 +390,8 @@ def call_stream_incremental(ctx, stream):
 
         handlers = {
             IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: run_export_request,
-            IDS.LIST_MEMBERS: run_v3_request,
+            IDS.LIST_MEMBERS_BY_UPDATE: run_v3_request,
+            IDS.LIST_MEMBERS_BY_CREATE: run_v3_request,
             IDS.CAMPAIGN_UNSUBSCRIBES: run_v3_request,
             IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: run_export_request,
             IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES: run_v3_request

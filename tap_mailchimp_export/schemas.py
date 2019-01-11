@@ -9,7 +9,8 @@ class IDS(object):
     CAMPAIGN_SUBSCRIBER_ACTIVITY = "campaign_subscriber_activity"
     CAMPAIGN_UNSUBSCRIBES = "campaign_unsubscribes"
     LISTS = "lists"
-    LIST_MEMBERS = "list_members"
+    LIST_MEMBERS_BY_UPDATE = "list_members_by_update"
+    LIST_MEMBERS_BY_CREATE = "list_members_by_create"
     AUTOMATION_WORKFLOWS = "automation_workflows"
     AUTOMATION_WORKFLOW_EMAILS = "automation_workflow_emails"
     AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY = "automation_workflow_subscriber_activity"
@@ -23,7 +24,8 @@ PK_FIELDS = {
     IDS.CAMPAIGNS: ["id"],
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: ["uuid"],
     IDS.LISTS: ["id"],
-    IDS.LIST_MEMBERS: ["email"],
+    IDS.LIST_MEMBERS_BY_UPDATE: ["email"],
+    IDS.LIST_MEMBERS_BY_CREATE: ["email"],
     IDS.CAMPAIGN_UNSUBSCRIBES: ["email"],
     IDS.AUTOMATION_WORKFLOWS: ["id"],
     IDS.AUTOMATION_WORKFLOW_EMAILS: ["id"],
@@ -33,19 +35,22 @@ PK_FIELDS = {
 
 EXPORT_API_PATH_NAMES = {
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "campaignSubscriberActivity",
-    IDS.LIST_MEMBERS: "list",
+    IDS.LIST_MEMBERS_BY_UPDATE: "list",
+    IDS.LIST_MEMBERS_BY_CREATE: "list",
     IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: "campaignSubscriberActivity"
 }
 
 V3_API_PATH_NAMES = {
-    IDS.LIST_MEMBERS: "members",
+    IDS.LIST_MEMBERS_BY_UPDATE: "members",
+    IDS.LIST_MEMBERS_BY_CREATE: "members",
     IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribed",
     IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES: "unsubscribed",
     IDS.AUTOMATION_WORKFLOW_EMAILS: "emails"
 }
 
 V3_API_INDEX_NAMES = {
-    IDS.LIST_MEMBERS: "members",
+    IDS.LIST_MEMBERS_BY_UPDATE: "members",
+    IDS.LIST_MEMBERS_BY_CREATE: "members",
     IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES: "unsubscribes",
     IDS.CAMPAIGN_UNSUBSCRIBES: "unsubscribes",
     IDS.AUTOMATION_WORKFLOWS: "automations",
@@ -55,7 +60,8 @@ V3_API_INDEX_NAMES = {
 V3_API_ENDPOINT_NAMES = {
     IDS.CAMPAIGNS: "campaigns",
     IDS.LISTS: "lists",
-    IDS.LIST_MEMBERS: "lists",
+    IDS.LIST_MEMBERS_BY_UPDATE: "lists",
+    IDS.LIST_MEMBERS_BY_CREATE: "lists",
     IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES: "reports",
     IDS.CAMPAIGN_UNSUBSCRIBES: "reports",
     IDS.AUTOMATION_WORKFLOWS: "automations",
@@ -64,7 +70,8 @@ V3_API_ENDPOINT_NAMES = {
 
 V3_SINCE_KEY = {
     IDS.CAMPAIGNS: "since_send_time",
-    IDS.LIST_MEMBERS: "since_last_changed",
+    IDS.LIST_MEMBERS_BY_UPDATE: "since_last_changed",
+    IDS.LIST_MEMBERS_BY_CREATE: "since_timestamp_opt",
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: "since",
     IDS.LISTS: "since_date_created",
     IDS.AUTOMATION_WORKFLOW_SUBSCRIBER_ACTIVITY: "since"
@@ -75,7 +82,8 @@ SUB_STREAMS = {
     IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: IDS.CAMPAIGNS,
     IDS.CAMPAIGN_UNSUBSCRIBES: IDS.CAMPAIGNS,
     IDS.AUTOMATION_WORKFLOW_UNSUBSCRIBES: IDS.AUTOMATION_WORKFLOW_EMAILS,
-    IDS.LIST_MEMBERS: IDS.LISTS
+    IDS.LIST_MEMBERS_BY_UPDATE: IDS.LISTS,
+    IDS.LIST_MEMBERS_BY_CREATE: IDS.LISTS,
 }
 
 INTERMEDIATE_STREAMS = {
