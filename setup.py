@@ -13,7 +13,7 @@ setup(
         "singer-python>=5.0.12",
         "mailsnake==1.6.4",
         'requests==2.18.4',
-        "simplejson",
+        "simplejson==3.11.1",
         "pendulum==1.2.0",
         "urllib3==1.22",
     ],
