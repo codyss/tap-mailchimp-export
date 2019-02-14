@@ -92,5 +92,5 @@ class Client(object):
         params.update(self.headers)
         return requests.post(self.export_url(stream),
                             params=params,
-                            timeout=5 * 60
+                            timeout=30 * 60
                             )
