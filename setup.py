@@ -10,7 +10,7 @@ setup(
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_mailchimp_export"],
     install_requires=[
-        "singer-python>=5.0.12",
+        "singer-python==5.6.1",
         "mailsnake==1.6.4",
         'requests==2.18.4',
         "simplejson==3.11.1",
