@@ -72,7 +72,9 @@ class Client(object):
         return requests.Request(method="GET", url=url, params=params)
 
     @backoff.on_exception(backoff.expo,
-                          RateLimitException,
+                          (RateLimitException,
+                           requests.exceptions.ConnectionError,
+                           requests.exceptions.HTTPError),
                           max_tries=10,
                           factor=2)
     def request_with_handling(self, request, tap_stream_id):

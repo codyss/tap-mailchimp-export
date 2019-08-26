@@ -111,7 +111,7 @@ class Context(object):
                 'sent_at': c['send_time'],
                 'variate_combination_ids': variate_combination_ids
             })
-        setattr(self, IDS.CAMPAIGNS, all_campaigns)
+        setattr(self, IDS.CAMPAIGNS, sorted(all_campaigns, key=lambda x: x['sent_at'], reverse=True))
 
     def save_lists_meta(self, lists):
         setattr(self, IDS.LISTS, [
