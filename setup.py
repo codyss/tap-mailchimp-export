@@ -15,7 +15,7 @@ setup(
         'requests==2.18.4',
         "simplejson==3.11.1",
         "pendulum==1.2.0",
-        "urllib3==1.22",
+        "urllib3==1.24.2",
     ],
     entry_points="""
     [console_scripts]
