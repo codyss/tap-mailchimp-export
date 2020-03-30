@@ -2,11 +2,11 @@
 
 This is a [Singer](https://singer.io) tap that produces JSON-formatted data
 following the [Singer
-spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
+spec](https://github.com/singer-io/getting-started/blob/master/docs/SPEC.md).
 
 This tap:
 
-- Pulls raw data from (http:/mailchimp.com)
+- Pulls raw data from (https://mailchimp.com)
 - Extracts the following resources:
   - Campaigns
   - Campaign Subscriber Activity

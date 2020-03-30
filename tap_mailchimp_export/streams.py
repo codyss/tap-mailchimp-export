@@ -2,23 +2,17 @@ import singer
 from .schemas import (
     IDS, V3_API_INDEX_NAMES, V3_SINCE_KEY, INTERMEDIATE_STREAMS, SUB_STREAMS
 )
-from .context import convert_to_mc_date
 import time
 import pendulum
 import uuid
 import json
-import pytz
 from collections import defaultdict
-from time import sleep
-from dateutil import parser
-from dateutil.tz import tzutc
-
-import backoff
 
 logger = singer.get_logger()
 
 BATCH_SIZE = 500
 PAGE_SIZE = 500
+
 
 class RemoteDisconnected(Exception):
     pass
@@ -373,18 +367,21 @@ def call_stream_incremental(ctx, stream):
                    defaultdict(str)
 
     stream_resource = SUB_STREAMS[stream]
+    try:
+        stream_resource_list = getattr(ctx, stream_resource)
+    except AttributeError:
+        logger.info(f'Skipping {stream} extraction because {stream_resource} is not '
+                    f'available')
+        return last_updated
 
-    for e in getattr(ctx, stream_resource):
+    for e in stream_resource_list:
         ctx.update_latest(e['id'], last_updated)
 
-        logger.info('querying {stream_resource} id: {id}, since: {since}, '
-            'for: {stream}'.format(
-                stream_resource=stream_resource.split('_')[-1][:-1],
-                id=e['id'],
-                since=last_updated[e['id']],
-                stream=stream.split('_')[-1]
-            )
-        )
+        logger.info('querying {stream_resource} id: {id}, since: {since}, for: '
+                    '{stream}'.format(stream_resource=stream_resource.split('_')[-1][:-1],
+                                      id=e['id'],
+                                      since=last_updated[e['id']],
+                                      stream=stream.split('_')[-1]))
 
         handlers = {
             IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY: run_export_request,
@@ -396,7 +393,7 @@ def call_stream_incremental(ctx, stream):
         }
 
         if stream in (IDS.CAMPAIGN_UNSUBSCRIBES, IDS.CAMPAIGN_SUBSCRIBER_ACTIVITY) \
-                     and e['variate_combination_ids']:
+                and e['variate_combination_ids']:
             most_recent_record = last_updated[e['id']]
             previous_record = last_updated[e['id']]
             for combo_id in e['variate_combination_ids']:
