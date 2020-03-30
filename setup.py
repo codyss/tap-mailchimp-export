@@ -12,7 +12,7 @@ setup(
     install_requires=[
         "singer-python==5.6.1",
         "mailsnake==1.6.4",
-        'requests==2.18.4',
+        'requests==2.20.0',
         "simplejson==3.11.1",
         "pendulum==1.2.0",
         "urllib3==1.22",
