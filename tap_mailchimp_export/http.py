@@ -26,7 +26,7 @@ def _join(a, b):
 class Client(object):
     def __init__(self, config, ctx):
         self.user_agent = config.get("user_agent")
-        self.apikey = config.get("apikey")
+        self.apikey = config['access_token'] + '-' + config['dc']
         self.dc = self.get_dc(config)
         self.session = requests.Session()
         self.ctx = ctx
@@ -34,7 +34,7 @@ class Client(object):
 
     @staticmethod
     def get_dc(config):
-        return config['apikey'].split('-')[1]
+        return config['dc']
 
     def get_headers(self):
         return {
