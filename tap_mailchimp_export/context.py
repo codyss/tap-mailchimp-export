@@ -24,9 +24,10 @@ class Context(object):
     def __init__(self, config, state):
         self.config = config
         self.state = state
-        self.mailsnake = MailSnake(config['apikey'])
+        apikey = config['access_token'] + '-' + config['dc']
+        self.mailsnake = MailSnake(apikey)
         self.client = Client(config, self)
-        self.export_client = MailSnake(config['apikey'],
+        self.export_client = MailSnake(apikey,
                                        api='export',
                                        requests_opts={'stream': True})
         self._catalog = None
