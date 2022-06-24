@@ -1,5 +1,4 @@
 import requests
-import singer
 import re
 from singer import metrics
 from .timeout import timeout
@@ -7,9 +6,6 @@ from .schemas import (
     EXPORT_API_PATH_NAMES, V3_API_PATH_NAMES, V3_API_ENDPOINT_NAMES
 )
 import backoff
-
-
-logger = singer.get_logger()
 
 
 FULL_URI = "https://{dc}.api.mailchimp.com/3.0/{v3_endpoint}"
