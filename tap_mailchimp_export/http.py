@@ -1,10 +1,15 @@
 import requests
+import singer
+import re
 from singer import metrics
 from .timeout import timeout
 from .schemas import (
     EXPORT_API_PATH_NAMES, V3_API_PATH_NAMES, V3_API_ENDPOINT_NAMES
 )
 import backoff
+
+
+logger = singer.get_logger()
 
 
 FULL_URI = "https://{dc}.api.mailchimp.com/3.0/{v3_endpoint}"
@@ -21,6 +26,9 @@ class RemoteDisconnected(Exception):
 
 def _join(a, b):
     return a.rstrip("/") + "/" + b.lstrip("/")
+
+
+trailing_slash = re.compile('.*\/$')
 
 
 class Client(object):
@@ -92,7 +100,15 @@ class Client(object):
 
     def export_post(self, stream, entity, last_updated, params):
         params.update(self.headers)
-        return requests.post(self.export_url(stream),
+        url = self.export_url(stream)
+
+        # Add trailing slash to prevent request being redirected to http
+        # Example, the following URL gets redirected to http://.../: 
+        # https://us10.api.mailchimp.com/export/1.0/campaignSubscriberActivity
+        if not trailing_slash.match(url):
+            url = f'{url}/'
+
+        return requests.post(url,
                             params=params,
                             timeout=30 * 60
                             )
