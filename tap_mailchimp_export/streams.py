@@ -127,11 +127,14 @@ def transform_event(record, campaign, include_sends):
 
     if 'error' in obj.keys():
         raise Exception(record)
+    elif int(obj.get('status', 0)) >= 400:
+        raise Exception(record)
 
     try:
         (email, events), = json.loads(record).items()
     except ValueError:
         events = []
+        email = ''
 
     new_events = []
 
