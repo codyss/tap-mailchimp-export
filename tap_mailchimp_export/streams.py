@@ -129,7 +129,7 @@ def transform_event(record, campaign, include_sends):
     obj = json.loads(record)
 
     if int(obj.get('code', 0)) == -50:
-        raise RateLimitException(reacord)
+        raise RateLimitException(record)
     if 'error' in obj.keys():
         raise Exception(record)
     elif int(obj.get('status', 0)) >= 400:
