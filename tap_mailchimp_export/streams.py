@@ -14,6 +14,10 @@ BATCH_SIZE = 500
 PAGE_SIZE = 500
 
 
+class RateLimitException(Exception):
+    pass
+
+
 class RemoteDisconnected(Exception):
     pass
 
@@ -124,14 +128,18 @@ def transform_event(record, campaign, include_sends):
         return []
     obj = json.loads(record)
 
-
+    if int(obj.get('code', 0)) == -50:
+        raise RateLimitException(record)
     if 'error' in obj.keys():
+        raise Exception(record)
+    elif int(obj.get('status', 0)) >= 400:
         raise Exception(record)
 
     try:
         (email, events), = json.loads(record).items()
     except ValueError:
         events = []
+        email = ''
 
     new_events = []
 
@@ -279,6 +287,12 @@ def run_export_request(ctx, entity, stream, last_updated, retries=0, param_id=No
                     write_records_and_update_state(
                         entity, stream, batched_records, last_updated)
 
+        except RateLimitException as e:
+            logger.info(e)
+            logger.info('Rate limit hit; waiting 90 seconds - then retrying')
+            time.sleep(90)
+            retries += 1
+            run_export_request(ctx, entity, stream, last_updated, retries)
         except Exception as e:
             logger.info(e)
             logger.info('Waiting 30 seconds - then retrying')

@@ -1,4 +1,5 @@
 import requests
+import re
 from singer import metrics
 from .timeout import timeout
 from .schemas import (
@@ -23,6 +24,9 @@ def _join(a, b):
     return a.rstrip("/") + "/" + b.lstrip("/")
 
 
+trailing_slash = re.compile('.*\/$')
+
+
 class Client(object):
     def __init__(self, config, ctx):
         self.user_agent = config.get("user_agent")
@@ -38,7 +42,7 @@ class Client(object):
 
     def get_headers(self):
         return {
-            'apikey': self.apikey
+            'Authorization': f'Bearer {self.apikey}'
         }
 
     def prepare_and_send(self, request):
@@ -69,7 +73,11 @@ class Client(object):
             url = _join(self.v3_url(stream), self.v3_endpoint(stream, item_id))
         else:
             url = self.v3_url(stream)
-        return requests.Request(method="GET", url=url, params=params)
+        
+        request = requests.Request(method="GET", url=url, params=params)
+        request.headers['Authorization'] = f'Bearer {self.apikey}'
+
+        return request
 
     @backoff.on_exception(backoff.expo,
                           (RateLimitException,
@@ -92,7 +100,15 @@ class Client(object):
 
     def export_post(self, stream, entity, last_updated, params):
         params.update(self.headers)
-        return requests.post(self.export_url(stream),
+        url = self.export_url(stream)
+
+        # Add trailing slash to prevent request being redirected to http
+        # Example, the following URL gets redirected to http://.../: 
+        # https://us10.api.mailchimp.com/export/1.0/campaignSubscriberActivity
+        if not trailing_slash.match(url):
+            url = f'{url}/'
+
+        return requests.post(url,
                             params=params,
                             timeout=30 * 60
                             )
