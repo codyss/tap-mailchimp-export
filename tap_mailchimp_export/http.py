@@ -42,7 +42,7 @@ class Client(object):
 
     def get_headers(self):
         return {
-            'apikey': self.apikey
+            'Authorization': f'Bearer {self.apikey}'
         }
 
     def prepare_and_send(self, request):
@@ -73,7 +73,11 @@ class Client(object):
             url = _join(self.v3_url(stream), self.v3_endpoint(stream, item_id))
         else:
             url = self.v3_url(stream)
-        return requests.Request(method="GET", url=url, params=params)
+        
+        request = requests.Request(method="GET", url=url, params=params)
+        request.headers['Authorization'] = f'Bearer {self.apikey}'
+
+        return request
 
     @backoff.on_exception(backoff.expo,
                           (RateLimitException,
